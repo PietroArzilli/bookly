@@ -568,7 +568,8 @@ input[type="time"]::-webkit-datetime-edit-ampm-field { display:none; }
 <div id="riporta-overlay" style="display:none;position:fixed;inset:0;background:rgba(26,25,22,0.7);z-index:8100;align-items:center;justify-content:center;backdrop-filter:blur(4px);padding:1rem">
   <div style="background:var(--surface);border-radius:var(--radius);padding:1.5rem;width:100%;max-width:320px;border:1px solid var(--border)">
     <div style="font-size:1rem;font-weight:600;margin-bottom:0.5rem">Riporta nella home</div>
-    <div style="font-size:0.85rem;color:var(--text2);margin-bottom:1.25rem">Vuoi riportare l'entrata nella home?</div>
+    <div style="font-size:0.85rem;color:var(--text2);margin-bottom:0.6rem">Vuoi riportare l'entrata nella home?</div>
+    <div style="font-size:0.75rem;color:var(--text3);margin-bottom:1.25rem;line-height:1.5">L'appuntamento sarà poi eliminato e diventerà un'entrata.</div>
     <label style="display:flex;align-items:center;gap:0.6rem;cursor:pointer;margin-bottom:1.5rem;font-size:0.85rem;user-select:none">
       <input type="checkbox" id="riporta-tassata" style="width:16px;height:16px;accent-color:var(--gold);cursor:pointer">
       Applica tasse
@@ -1536,9 +1537,12 @@ async function confirmRiportaEntrata() {
   if (!error && data) {
     const { start, end } = monthRange();
     if (aptDate >= start && aptDate <= end) entrate.push(data);
+    await sb.from('appuntamenti').delete().eq('id', _riportaAptId).eq('user_id', currentUser.id);
+    appuntamenti = appuntamenti.filter(a => String(a.id) !== String(_riportaAptId));
     closeRiportaOverlay();
-    showToast('Entrata aggiunta alla home');
+    showToast('Entrata aggiunta, appuntamento eliminato');
     render();
+    renderAppuntamenti();
   } else {
     console.error('confirmRiportaEntrata error:', error);
     showToast('Errore: ' + (error?.message || 'Riprovare'));
