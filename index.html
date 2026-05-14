@@ -774,7 +774,7 @@ input[type="time"]::-webkit-datetime-edit-ampm-field { display:none; }
           <div class="month-grid" id="month-grid"></div>
         </div>
         <div class="card">
-          <div class="card-header"><span class="card-title">Log Mensile</span></div>
+          <div class="card-header"><span class="card-title">Recap Mensile</span></div>
           <div style="overflow-x:auto">
             <table class="expense-table">
               <thead><tr><th>Data</th><th>Tipo</th><th>Descrizione</th><th>Tasse?</th><th style="text-align:right">Importo</th><th></th></tr></thead>
@@ -1703,6 +1703,13 @@ function renderLog() {
 
 function selectAptDay(d) {
   selectedAptDay = selectedAptDay === d ? null : d;
+  if (selectedAptDay !== null) {
+    const dd = String(selectedAptDay).padStart(2, '0');
+    const mm = String(currentMonth + 1).padStart(2, '0');
+    const yyyy = String(currentYear);
+    const el = document.getElementById('apt-date');
+    if (el) el.value = `${dd}/${mm}/${yyyy}`;
+  }
   renderAppuntamenti();
 }
 
