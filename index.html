@@ -178,7 +178,12 @@ header {
 .stat-sub { font-size:0.68rem; color:var(--text3); margin-top:0.3rem; font-family:'Geist Mono',monospace; }
 
 /* ---- LAYOUT ---- */
-.app-wrapper { max-width:1160px; margin:0 auto; padding:1.75rem 2rem; display:grid; grid-template-columns:1fr 300px; gap:1.5rem; }
+.app-wrapper { max-width:1160px; margin:0 auto; padding:1.75rem 2rem; display:grid; grid-template-columns:1fr 300px; gap:1.5rem; align-items:start; }
+@media (min-width: 901px) {
+  .app-wrapper > div:first-child { grid-column:1; grid-row:1; }
+  .entry-panel { grid-column:2; grid-row:1 / span 2; }
+  #recap-card { grid-column:1; grid-row:2; }
+}
 .apts-wrapper { max-width:1160px; margin:0 auto; padding:1.75rem 2rem; display:grid; grid-template-columns:340px 1fr; gap:1.5rem; }
 .settings-wrapper { max-width:520px; margin:1.75rem auto; padding:0 2rem; }
 /* =====================================================
@@ -787,21 +792,6 @@ input[type="time"]::-webkit-datetime-edit-ampm-field { display:none; }
           </div>
           <div class="month-grid" id="month-grid"></div>
         </div>
-        <div class="card">
-          <div class="card-header">
-            <span class="card-title">Recap Mensile</span>
-            <div style="display:flex;align-items:center;gap:8px">
-              <span onclick="openRecapAll()" style="font-size:0.75rem;color:var(--text3);text-decoration:underline;cursor:pointer;font-weight:500">visualizza tutto</span>
-              <button class="help-btn" onclick="showHelp(event,'Le ultime 3 voci inserite nel mese. Clicca il matita per modificare, la x per eliminare. Usa visualizza tutto per vedere e gestire il riepilogo completo.')">?</button>
-            </div>
-          </div>
-          <div style="overflow-x:auto">
-            <table class="expense-table">
-              <thead><tr><th>Data</th><th>Tipo</th><th>Descrizione</th><th>Tasse?</th><th style="text-align:right">Importo</th><th></th></tr></thead>
-              <tbody id="log-tbody"></tbody>
-            </table>
-          </div>
-        </div>
       </div>
 
       <div class="entry-panel">
@@ -858,6 +848,22 @@ input[type="time"]::-webkit-datetime-edit-ampm-field { display:none; }
           <div class="calc-row"><span>− Tasse</span><span id="c-tax" class="mono red">€0</span></div>
           <div class="calc-row"><span>− Spese</span><span id="c-costs" class="mono red">€0</span></div>
           <div class="calc-total"><span>Netto</span><span id="c-net" class="calc-total-val">€0</span></div>
+        </div>
+      </div>
+
+      <div class="card" id="recap-card">
+        <div class="card-header">
+          <span class="card-title">Recap Mensile</span>
+          <div style="display:flex;align-items:center;gap:8px">
+            <span onclick="openRecapAll()" style="font-size:0.75rem;color:var(--text3);text-decoration:underline;cursor:pointer;font-weight:500">visualizza tutto</span>
+            <button class="help-btn" onclick="showHelp(event,'Le ultime 3 voci inserite nel mese. Clicca il matita per modificare, la x per eliminare. Usa visualizza tutto per vedere e gestire il riepilogo completo.')">?</button>
+          </div>
+        </div>
+        <div style="overflow-x:auto">
+          <table class="expense-table">
+            <thead><tr><th>Data</th><th>Tipo</th><th>Descrizione</th><th>Tasse?</th><th style="text-align:right">Importo</th><th></th></tr></thead>
+            <tbody id="log-tbody"></tbody>
+          </table>
         </div>
       </div>
     </div>
