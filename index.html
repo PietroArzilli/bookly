@@ -515,6 +515,31 @@ input[type="time"]::-webkit-datetime-edit-ampm-field { display:none; }
   </div>
 </div>
 
+<!-- EDIT ENTRY OVERLAY -->
+<div id="edit-entry-overlay" style="display:none;position:fixed;inset:0;background:rgba(26,25,22,0.7);z-index:8200;align-items:center;justify-content:center;backdrop-filter:blur(4px);padding:1rem">
+  <div class="edit-modal-body">
+    <div style="font-size:1rem;font-weight:600;margin-bottom:1.25rem" id="edit-entry-title">Modifica</div>
+    <div class="form-group">
+      <label class="form-label">Importo (€)</label>
+      <input type="number" id="edit-entry-amount" class="form-input" placeholder="0.00" step="0.01" min="0">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Descrizione</label>
+      <input type="text" id="edit-entry-desc" class="form-input" placeholder="">
+    </div>
+    <div id="edit-entry-tax-row" class="form-group">
+      <label style="display:flex;align-items:center;gap:0.6rem;cursor:pointer;font-size:0.85rem;user-select:none">
+        <input type="checkbox" id="edit-entry-taxable" style="width:16px;height:16px;accent-color:var(--gold);cursor:pointer">
+        Applica tasse
+      </label>
+    </div>
+    <div style="display:flex;gap:0.75rem;margin-top:1.25rem">
+      <button id="btn-save-edit-entry" onclick="saveEditEntry()" style="flex:1;padding:0.7rem;background:var(--text);color:var(--bg);border:none;border-radius:var(--radius-sm);cursor:pointer;font-weight:600;font-size:0.85rem">Salva</button>
+      <button onclick="closeEditEntry()" style="flex:1;padding:0.65rem;background:none;border:1px solid var(--border);border-radius:var(--radius-sm);cursor:pointer;font-size:0.82rem;color:var(--text2)">Annulla</button>
+    </div>
+  </div>
+</div>
+
 <!-- RIPORTA ENTRATA OVERLAY -->
 <div id="riporta-overlay" style="display:none;position:fixed;inset:0;background:rgba(26,25,22,0.7);z-index:8100;align-items:center;justify-content:center;backdrop-filter:blur(4px);padding:1rem">
   <div style="background:var(--surface);border-radius:var(--radius);padding:1.5rem;width:100%;max-width:320px;border:1px solid var(--border)">
@@ -1254,6 +1279,7 @@ function isUtcMidnight(data_ora) {
 }
 let _editingAptId = null;
 let _riportaAptId = null;
+let _editingEntryType = null, _editingEntryId = null;
 let speseRicorrenti = [], eccezioniRicorrenti = [], _editingRicId = null;
 
 function goToCheckout() {
@@ -1558,10 +1584,61 @@ function renderSelectedDay() {
       <span>${e.descrizione || (e.type === 'income' ? 'Entrata' : 'Spesa')}</span>
       <div style="display:flex;align-items:center;gap:10px">
         <span class="mono" style="color:${e.type === 'income' ? 'var(--green)' : 'var(--red)'}">€${parseFloat(e.importo).toFixed(2)}</span>
+        <button class="btn-edit-apt" onclick="openEditEntry('${e.type}','${e.id}')" title="Modifica">✎</button>
         <button class="entry-del" onclick="deleteEntry('${e.type}','${e.id}')">×</button>
       </div>
     </div>`).join('');
   list.innerHTML = ricHtml + allHtml;
+}
+
+function openEditEntry(type, id) {
+  const arr = type === 'income' ? entrate : uscite;
+  const entry = arr.find(e => String(e.id) === String(id));
+  if (!entry) return;
+  _editingEntryType = type;
+  _editingEntryId = id;
+  document.getElementById('edit-entry-title').textContent = type === 'income' ? 'Modifica entrata' : 'Modifica uscita';
+  document.getElementById('edit-entry-amount').value = parseFloat(entry.importo || 0).toFixed(2);
+  document.getElementById('edit-entry-desc').value = entry.descrizione || '';
+  const taxRow = document.getElementById('edit-entry-tax-row');
+  if (type === 'income') {
+    taxRow.style.display = '';
+    document.getElementById('edit-entry-taxable').checked = entry.tassata !== false;
+  } else {
+    taxRow.style.display = 'none';
+  }
+  document.getElementById('edit-entry-overlay').style.display = 'flex';
+}
+
+function closeEditEntry() {
+  _editingEntryType = null;
+  _editingEntryId = null;
+  document.getElementById('edit-entry-overlay').style.display = 'none';
+}
+
+async function saveEditEntry() {
+  if (!_editingEntryType || !_editingEntryId || !currentUser) return;
+  const amt = parseFloat(document.getElementById('edit-entry-amount').value);
+  if (isNaN(amt) || amt < 0) return showToast('Inserisci un importo valido.');
+  const desc = document.getElementById('edit-entry-desc').value.trim();
+  const btn = document.getElementById('btn-save-edit-entry');
+  if (btn) btn.disabled = true;
+  const table = _editingEntryType === 'income' ? 'entrate' : 'uscite';
+  const updates = { importo: amt, descrizione: desc };
+  if (_editingEntryType === 'income') updates.tassata = document.getElementById('edit-entry-taxable').checked;
+  const { error } = await sb.from(table).update(updates).eq('id', _editingEntryId).eq('user_id', currentUser.id);
+  if (btn) btn.disabled = false;
+  if (!error) {
+    const arr = _editingEntryType === 'income' ? entrate : uscite;
+    const idx = arr.findIndex(e => String(e.id) === String(_editingEntryId));
+    if (idx !== -1) arr[idx] = { ...arr[idx], ...updates };
+    closeEditEntry();
+    showToast('Voce aggiornata');
+    render();
+  } else {
+    console.error('saveEditEntry error:', error);
+    showToast('Errore: ' + (error.message || 'Riprovare'));
+  }
 }
 
 function updateStats() {
