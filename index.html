@@ -1340,7 +1340,7 @@ function goToCheckout() {
   const userId     = encodeURIComponent(currentUser.id);
   const email      = encodeURIComponent(currentUser.email || '');
   const successUrl = encodeURIComponent(window.location.href.split('?')[0] + '?subscribed=1');
-  window.location.href = `${base}?checkout[custom][user_id]=${userId}&checkout[email]=${email}&checkout[redirect_url]=${successUrl}`;
+  window.open(`${base}?checkout[custom][user_id]=${userId}&checkout[email]=${email}`, '_blank');
 }
 
 async function waitForActivation() {
