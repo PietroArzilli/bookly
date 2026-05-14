@@ -792,7 +792,7 @@ input[type="time"]::-webkit-datetime-edit-ampm-field { display:none; }
             <span class="card-title">Calendario</span>
             <div style="display:flex;align-items:center;gap:8px">
               <button class="btn-ric-link" style="width:auto;margin-top:0" onclick="openGestisciRicorrenti()">↺ Modifica spese ricorrenti</button>
-              <button class="help-btn" onclick="showHelp(event,'I punti colorati segnalano i giorni con movimenti: verde = entrata, rosso = uscita, giallo = appuntamento. Clicca un giorno per vedere i dettagli e registrare voci.')">?</button>
+              <button class="help-btn" onclick="showHelp(event,'Clicca un giorno per vedere i dettagli e registrare voci.<br><br><b>Legenda pallini</b><br><span style=\'display:inline-flex;align-items:center;gap:5px;margin-top:4px\'><span style=\'width:7px;height:7px;border-radius:50%;background:#4a9e6a;flex-shrink:0;display:inline-block\'></span> Entrata</span><br><span style=\'display:inline-flex;align-items:center;gap:5px\'><span style=\'width:7px;height:7px;border-radius:50%;background:#e03a3a;flex-shrink:0;display:inline-block\'></span> Uscita</span><br><span style=\'display:inline-flex;align-items:center;gap:5px\'><span style=\'width:7px;height:7px;border-radius:50%;background:#c89c00;flex-shrink:0;display:inline-block\'></span> Appuntamento</span>')">?</button>
             </div>
           </div>
           <div class="month-grid" id="month-grid"></div>
@@ -993,7 +993,7 @@ const MONTHS_SHORT = ['Gen','Feb','Mar','Apr','Mag','Giu','Lug','Ago','Set','Ott
 function showHelp(event, text) {
   event.stopPropagation();
   const tip = document.getElementById('help-tooltip');
-  tip.textContent = text;
+  tip.innerHTML = text;
   tip.style.display = 'block';
   const rect = event.currentTarget.getBoundingClientRect();
   const tipW = 220;
