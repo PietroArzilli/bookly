@@ -1333,10 +1333,11 @@ let speseRicorrenti = [], eccezioniRicorrenti = [], _editingRicId = null;
 
 function goToCheckout() {
   if (!currentUser) return;
-  const base = 'https://inkbookss.lemonsqueezy.com/checkout/buy/a88fcb09-4446-4b5b-9ed8-e9d97b82f731';
-  const userId = encodeURIComponent(currentUser.id);
-  const email  = encodeURIComponent(currentUser.email || '');
-  window.location.href = `${base}?checkout[custom][user_id]=${userId}&checkout[email]=${email}`;
+  const base       = 'https://inkbookss.lemonsqueezy.com/checkout/buy/a88fcb09-4446-4b5b-9ed8-e9d97b82f731';
+  const userId     = encodeURIComponent(currentUser.id);
+  const email      = encodeURIComponent(currentUser.email || '');
+  const successUrl = encodeURIComponent(window.location.href.split('?')[0] + '?subscribed=1');
+  window.location.href = `${base}?checkout[custom][user_id]=${userId}&checkout[email]=${email}&checkout[redirect_url]=${successUrl}`;
 }
 
 async function waitForActivation() {
