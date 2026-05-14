@@ -1489,7 +1489,7 @@ function render() {
 }
 
 function updateLabels() {
-  document.getElementById('label-studio').textContent    = `Allo studio (${(STUDIO_PCT*100).toFixed(0)}%)`;
+  document.getElementById('label-studio').textContent    = STUDIO_PCT === 0 ? 'Quota studio (non presente)' : `Allo studio (${(STUDIO_PCT*100).toFixed(0)}%)`;
   document.getElementById('label-tax').textContent       = `Tasse (${(TAX_PCT*100).toFixed(0)}%)`;
   document.getElementById('label-tax-check').textContent = `Applica tasse (${(TAX_PCT*100).toFixed(0)}%)`;
 }
