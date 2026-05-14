@@ -1384,13 +1384,17 @@ async function addEntry(type) {
 }
 
 async function deleteEntry(type, id) {
+  if (!confirm('Eliminare questa voce?')) return;
   const table = type === 'income' ? 'entrate' : 'uscite';
   const { error } = await sb.from(table).delete().eq('id', id).eq('user_id', currentUser.id);
   if (!error) {
-    if (type === 'income') entrate = entrate.filter(e => e.id !== id);
-    else                   uscite  = uscite.filter(e => e.id !== id);
+    if (type === 'income') entrate = entrate.filter(e => String(e.id) !== String(id));
+    else                   uscite  = uscite.filter(e => String(e.id) !== String(id));
     showToast('Eliminato');
     render();
+  } else {
+    console.error('deleteEntry error:', error);
+    showToast('Errore eliminazione: ' + (error.message || 'Riprovare'));
   }
 }
 
