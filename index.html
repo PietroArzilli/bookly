@@ -518,6 +518,22 @@ input[type="time"]::-webkit-datetime-edit-ampm-field { display:none; }
   </div>
 </div>
 
+<!-- RECAP ALL OVERLAY -->
+<div id="recap-all-overlay" style="display:none;position:fixed;inset:0;background:rgba(26,25,22,0.7);z-index:8300;align-items:flex-start;justify-content:center;backdrop-filter:blur(4px);padding:1rem;overflow-y:auto">
+  <div style="background:var(--surface);border-radius:var(--radius);width:100%;max-width:640px;border:1px solid var(--border);margin:auto">
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:1.25rem 1.25rem 0.75rem">
+      <div style="font-size:1rem;font-weight:600" id="recap-all-title">Recap Mensile</div>
+      <button onclick="closeRecapAll()" style="background:none;border:none;cursor:pointer;color:var(--text3);font-size:1.1rem;line-height:1;padding:0.2rem 0.4rem">×</button>
+    </div>
+    <div style="overflow-x:auto;padding:0 0 1.25rem">
+      <table class="expense-table">
+        <thead><tr><th>Data</th><th>Tipo</th><th>Descrizione</th><th>Tasse?</th><th style="text-align:right">Importo</th><th></th></tr></thead>
+        <tbody id="recap-all-tbody"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
 <!-- EDIT ENTRY OVERLAY -->
 <div id="edit-entry-overlay" style="display:none;position:fixed;inset:0;background:rgba(26,25,22,0.7);z-index:8200;align-items:center;justify-content:center;backdrop-filter:blur(4px);padding:1rem">
   <div class="edit-modal-body">
@@ -774,7 +790,10 @@ input[type="time"]::-webkit-datetime-edit-ampm-field { display:none; }
           <div class="month-grid" id="month-grid"></div>
         </div>
         <div class="card">
-          <div class="card-header"><span class="card-title">Recap Mensile</span></div>
+          <div class="card-header">
+            <span class="card-title">Recap Mensile</span>
+            <span onclick="openRecapAll()" style="font-size:0.75rem;color:var(--text3);text-decoration:underline;cursor:pointer;font-weight:500">visualizza tutto</span>
+          </div>
           <div style="overflow-x:auto">
             <table class="expense-table">
               <thead><tr><th>Data</th><th>Tipo</th><th>Descrizione</th><th>Tasse?</th><th style="text-align:right">Importo</th><th></th></tr></thead>
@@ -1672,22 +1691,20 @@ function updateStats() {
   document.getElementById('c-net').textContent    = f(net);
 }
 
-function renderLog() {
+function buildLogRows() {
   const ricRows = getRicorrentiAttive().map(r => ({
     type: 'expense', day: r.giorno, importo: r.importo,
     descrizione: '↺ ' + (r.descrizione || 'Spesa ricorrente'), tassata: false, isRic: true, id: r.id
   }));
-  const rows = [
+  return [
     ...entrate.map(e => ({ ...e, type: 'income',  day: parseInt((e.data || '').split('-')[2]) })),
     ...uscite.map(e  => ({ ...e, type: 'expense', day: parseInt((e.data || '').split('-')[2]) })),
     ...ricRows
-  ].sort((a, b) => a.day - b.day);
-  const tbody = document.getElementById('log-tbody');
-  if (!rows.length) {
-    tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;padding:1.5rem;color:var(--text3);font-size:0.78rem">Nessuna voce questo mese</td></tr>`;
-    return;
-  }
-  tbody.innerHTML = rows.map(r => `
+  ].sort((a, b) => b.day - a.day);
+}
+
+function logRowHtml(r) {
+  return `
     <tr>
       <td class="mono">${r.day}/${currentMonth + 1}</td>
       <td><span class="badge ${r.type}">${r.type === 'income' ? 'Entrata' : 'Uscita'}</span></td>
@@ -1698,7 +1715,32 @@ function renderLog() {
         ? `<button class="entry-del" onclick="skipRicorrente('${r.id}')" title="Salta questo mese">×</button>`
         : `<button class="entry-del" onclick="deleteEntry('${r.type}','${r.id}')">×</button>`}
       </td>
-    </tr>`).join('');
+    </tr>`;
+}
+
+function renderLog() {
+  const rows = buildLogRows();
+  const tbody = document.getElementById('log-tbody');
+  if (!rows.length) {
+    tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;padding:1.5rem;color:var(--text3);font-size:0.78rem">Nessuna voce questo mese</td></tr>`;
+    return;
+  }
+  tbody.innerHTML = rows.slice(0, 3).map(logRowHtml).join('');
+}
+
+function openRecapAll() {
+  const rows = buildLogRows();
+  const title = document.getElementById('recap-all-title');
+  if (title) title.textContent = `Recap — ${MONTHS[currentMonth]} ${currentYear}`;
+  const tbody = document.getElementById('recap-all-tbody');
+  tbody.innerHTML = rows.length
+    ? rows.map(logRowHtml).join('')
+    : `<tr><td colspan="6" style="text-align:center;padding:1.5rem;color:var(--text3);font-size:0.78rem">Nessuna voce questo mese</td></tr>`;
+  document.getElementById('recap-all-overlay').style.display = 'flex';
+}
+
+function closeRecapAll() {
+  document.getElementById('recap-all-overlay').style.display = 'none';
 }
 
 function selectAptDay(d) {
