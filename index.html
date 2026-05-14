@@ -893,8 +893,8 @@ input[type="time"]::-webkit-datetime-edit-ampm-field { display:none; }
               <input type="text" id="apt-client" class="form-input" placeholder="es. Marco R.">
             </div>
             <div class="form-group">
-              <label class="form-label">Importo Previsto (€) <span style="font-weight:400;color:var(--text3)">(opzionale)</span></label>
-              <input type="number" id="apt-amount" class="form-input" placeholder="0.00" step="0.01" min="0">
+              <label class="form-label">Importo Previsto (€)</label>
+              <input type="number" id="apt-amount" class="form-input" placeholder="0.00" step="0.01" min="0" required>
             </div>
             <div class="form-group">
               <label class="form-label">Note</label>
@@ -1449,7 +1449,9 @@ async function deleteEntry(type, id) {
 async function addAppuntamento() {
   const date   = parseItDate(document.getElementById('apt-date').value);
   const client = document.getElementById('apt-client').value.trim();
+  const amtRaw = parseFloat(document.getElementById('apt-amount').value);
   if (!date || !client) return showToast('Inserisci data valida (GG/MM/AAAA) e nome cliente.');
+  if (isNaN(amtRaw) || amtRaw < 0) return showToast('Inserisci un importo previsto valido.');
 
   const btn = document.getElementById('btn-add-apt');
   btn.disabled = true;
@@ -1459,12 +1461,11 @@ async function addAppuntamento() {
     ? date + 'T' + timeVal + ':00' + getTzOffset()
     : date + 'T00:00:00Z';
 
-  const amtRaw = parseFloat(document.getElementById('apt-amount').value);
   const { data, error } = await sb.from('appuntamenti').insert({
     user_id:          currentUser.id,
     data_ora:         dataOra,
     nome_cliente:     client,
-    importo_previsto: isNaN(amtRaw) ? null : amtRaw,
+    importo_previsto: amtRaw,
     note:             document.getElementById('apt-notes').value.trim(),
     stato:            'confermato'
   }).select().single();
