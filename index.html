@@ -1390,6 +1390,7 @@ async function addAppuntamento() {
 }
 
 async function deleteAppuntamento(id) {
+  if (!currentUser) return;
   if (!confirm('Eliminare questo appuntamento?')) return;
   const { error } = await sb.from('appuntamenti').delete().eq('id', id).eq('user_id', currentUser.id);
   if (!error) {
@@ -1397,34 +1398,10 @@ async function deleteAppuntamento(id) {
     showToast('Appuntamento eliminato');
     renderAppuntamenti();
     renderCalendar();
+  } else {
+    console.error('deleteAppuntamento error:', error);
+    showToast('Errore eliminazione: ' + (error.message || 'Riprovare'));
   }
-}
-
-async function convertToEntrata(id) {
-  const apt = _aptById[id];
-  if (!apt) return;
-  if (!confirm(`Convertire l'appuntamento di ${apt.nome_cliente} (€${parseFloat(apt.importo_previsto||0).toFixed(2)}) in entrata tassata?`)) return;
-
-  const aptDate = apt.data_ora ? new Date(apt.data_ora).toLocaleDateString('sv') : '';
-  const desc    = apt.nome_cliente + (apt.note ? ' — ' + apt.note : '');
-  const { data, error } = await sb.from('entrate').insert({
-    user_id: currentUser.id, importo: parseFloat(apt.importo_previsto || 0),
-    descrizione: desc, data: aptDate, tassata: true, appuntamento_id: apt.id
-  }).select().single();
-
-  if (!error && data) {
-    const { start, end } = monthRange();
-    if (aptDate >= start && aptDate <= end) entrate.push(data);
-
-    if (apt.stato !== 'completato') {
-      await sb.from('appuntamenti').update({ stato: 'completato' }).eq('id', apt.id);
-      const idx = appuntamenti.findIndex(a => String(a.id) === String(apt.id));
-      if (idx !== -1) appuntamenti[idx].stato = 'completato';
-    }
-    showToast('Convertito in entrata');
-    render();
-    renderAppuntamenti();
-  } else { showToast('Errore conversione.'); }
 }
 
 // =====================================================
@@ -1660,7 +1637,6 @@ function renderAppuntamenti() {
     const timeStr = showTime ? dt.toLocaleTimeString('it-IT', { hour:'2-digit', minute:'2-digit' }) : '';
     const amt = parseFloat(a.importo_previsto || 0);
     const amtStr = amt > 0 ? '€' + amt.toFixed(2) : '';
-    const canConvert = a.stato !== 'cancellato';
     const subParts = [a.note, amtStr].filter(Boolean).join(' · ');
     return `
     <div class="apt-log-item">
@@ -1670,7 +1646,6 @@ function renderAppuntamenti() {
         ${subParts ? `<div class="apt-log-sub">${subParts} <span style="color:${statusColor[a.stato]}">${statusLabel[a.stato]||''}</span></div>` : `<div class="apt-log-sub"><span style="color:${statusColor[a.stato]}">${statusLabel[a.stato]||''}</span></div>`}
       </div>
       <div class="apt-log-actions">
-        ${canConvert ? `<button class="btn-convert" onclick="convertToEntrata('${a.id}')" title="Tassa l'entrata">→</button>` : ''}
         <button class="btn-edit-apt" onclick="editAppuntamento('${a.id}')" title="Modifica">✎</button>
         <button class="btn-del-apt" onclick="deleteAppuntamento('${a.id}')" title="Elimina">×</button>
       </div>
