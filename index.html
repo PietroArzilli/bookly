@@ -442,6 +442,9 @@ input[type="time"]::-webkit-datetime-edit-ampm-field { display:none; }
 .apt-log-actions { display:flex; gap:0.35rem; align-items:center; flex-shrink:0; }
 .btn-edit-apt { padding:0.28rem 0.5rem; background:none; color:var(--text3); border:1px solid var(--border); border-radius:var(--radius-sm); font-size:0.7rem; line-height:1; cursor:pointer; display:inline-flex; align-items:center; }
 .btn-edit-apt:hover { color:var(--text); border-color:var(--text2); }
+.help-btn { width:17px; height:17px; border-radius:50%; background:none; border:1px solid var(--border); color:var(--text3); font-size:0.58rem; font-weight:700; cursor:pointer; display:inline-flex; align-items:center; justify-content:center; flex-shrink:0; line-height:1; padding:0; }
+.help-btn:hover { color:var(--text); border-color:var(--text2); }
+#help-tooltip { display:none; position:fixed; z-index:9999; background:#1a1916; border:1px solid var(--border); border-radius:10px; padding:0.75rem 1rem; max-width:220px; font-size:0.77rem; color:var(--text2); line-height:1.55; box-shadow:0 4px 24px rgba(0,0,0,0.5); }
 /* ---- RICORRENTI ---- */
 .btn-ric-link { width:100%; margin-top:0.6rem; padding:0.45rem 0.75rem; background:none; border:1px dashed var(--border); border-radius:var(--radius-sm); font-size:0.72rem; color:var(--text3); cursor:pointer; display:flex; align-items:center; gap:0.4rem; justify-content:center; }
 .btn-ric-link:hover { color:var(--text2); border-color:var(--text2); }
@@ -517,6 +520,8 @@ input[type="time"]::-webkit-datetime-edit-ampm-field { display:none; }
     <button onclick="closeGestisciRicorrenti()" style="margin-top:1.25rem;width:100%;padding:0.65rem;background:none;border:1px solid var(--border);border-radius:var(--radius-sm);cursor:pointer;font-size:0.82rem;color:var(--text2)">Chiudi</button>
   </div>
 </div>
+
+<div id="help-tooltip"></div>
 
 <!-- RECAP ALL OVERLAY -->
 <div id="recap-all-overlay" style="display:none;position:fixed;inset:0;background:rgba(26,25,22,0.7);z-index:8300;align-items:flex-start;justify-content:center;backdrop-filter:blur(4px);padding:1rem;overflow-y:auto">
@@ -759,9 +764,8 @@ input[type="time"]::-webkit-datetime-edit-ampm-field { display:none; }
       <div class="stat-sub">Lordo clienti</div>
     </div>
     <div class="stat-card">
-      <div class="stat-label" id="label-studio">Allo studio (--)</div>
+      <div class="stat-label" id="label-studio">Quota studio (--)</div>
       <div class="stat-value red" id="s-studio">€0</div>
-      <div class="stat-sub">Quota studio</div>
     </div>
     <div class="stat-card">
       <div class="stat-label" id="label-tax">Tasse (--)</div>
@@ -785,14 +789,20 @@ input[type="time"]::-webkit-datetime-edit-ampm-field { display:none; }
         <div class="card" style="margin-bottom:1.5rem">
           <div class="card-header">
             <span class="card-title">Calendario</span>
-            <button class="btn-ric-link" style="width:auto;margin-top:0" onclick="openGestisciRicorrenti()">↺ Modifica spese ricorrenti</button>
+            <div style="display:flex;align-items:center;gap:8px">
+              <button class="btn-ric-link" style="width:auto;margin-top:0" onclick="openGestisciRicorrenti()">↺ Modifica spese ricorrenti</button>
+              <button class="help-btn" onclick="showHelp(event,'I punti colorati segnalano i giorni con movimenti: verde = entrata, rosso = uscita, giallo = appuntamento. Clicca un giorno per vedere i dettagli e registrare voci.')">?</button>
+            </div>
           </div>
           <div class="month-grid" id="month-grid"></div>
         </div>
         <div class="card">
           <div class="card-header">
             <span class="card-title">Recap Mensile</span>
-            <span onclick="openRecapAll()" style="font-size:0.75rem;color:var(--text3);text-decoration:underline;cursor:pointer;font-weight:500">visualizza tutto</span>
+            <div style="display:flex;align-items:center;gap:8px">
+              <span onclick="openRecapAll()" style="font-size:0.75rem;color:var(--text3);text-decoration:underline;cursor:pointer;font-weight:500">visualizza tutto</span>
+              <button class="help-btn" onclick="showHelp(event,'Le ultime 3 voci inserite nel mese. Clicca il matita per modificare, la x per eliminare. Usa visualizza tutto per vedere e gestire il riepilogo completo.')">?</button>
+            </div>
           </div>
           <div style="overflow-x:auto">
             <table class="expense-table">
@@ -807,7 +817,10 @@ input[type="time"]::-webkit-datetime-edit-ampm-field { display:none; }
         <div class="card">
           <div class="card-header">
             <span class="card-title">Aggiungi</span>
-            <span id="selected-day-display" style="font-size:0.75rem;font-weight:600;color:var(--text2)">—</span>
+            <div style="display:flex;align-items:center;gap:8px">
+              <span id="selected-day-display" style="font-size:0.75rem;font-weight:600;color:var(--text2)">—</span>
+              <button class="help-btn" onclick="showHelp(event,'Registra una nuova entrata o uscita per il giorno selezionato nel calendario. Per le entrate puoi scegliere se applicare le tasse.')">?</button>
+            </div>
           </div>
           <div class="form-body">
             <div class="tab-row">
@@ -848,7 +861,7 @@ input[type="time"]::-webkit-datetime-edit-ampm-field { display:none; }
         </div>
 
         <div class="card">
-          <div class="card-header"><span class="card-title">Riepilogo mese</span></div>
+          <div class="card-header"><span class="card-title">Riepilogo mese</span><button class="help-btn" onclick="showHelp(event,'Calcolo netto del mese: lordo meno quota studio, tasse e spese. Si aggiorna in automatico ad ogni modifica.')">?</button></div>
           <div class="calc-row"><span>Lordo</span><span id="c-gross" class="mono">€0</span></div>
           <div class="calc-row"><span>− Studio</span><span id="c-studio" class="mono red">€0</span></div>
           <div class="calc-row"><span>− Tasse</span><span id="c-tax" class="mono red">€0</span></div>
@@ -864,7 +877,7 @@ input[type="time"]::-webkit-datetime-edit-ampm-field { display:none; }
     <div class="apts-wrapper">
       <div>
         <div class="card">
-          <div class="card-header"><span class="card-title">Nuovo Appuntamento</span></div>
+          <div class="card-header"><span class="card-title">Nuovo Appuntamento</span><button class="help-btn" onclick="showHelp(event,'Pianifica un appuntamento con cliente, data e importo stimato. L importo e solo una previsione e non incide sui totali finche non usi il tasto doppia spunta per riportarlo nella home.')">?</button></div>
           <div class="form-body">
             <div class="form-group">
               <label class="form-label">Data</label>
@@ -901,7 +914,7 @@ input[type="time"]::-webkit-datetime-edit-ampm-field { display:none; }
       </div>
 
       <div>
-        <div class="apt-preview-banner">
+        <div class="apt-preview-banner" style="position:relative">
           <div>
             <div class="apt-preview-label">Guadagno previsto (confermati)</div>
             <div class="apt-preview-val" id="apt-preview-total">€0,00</div>
@@ -910,9 +923,10 @@ input[type="time"]::-webkit-datetime-edit-ampm-field { display:none; }
             <div class="apt-preview-label">Appuntamenti — <span id="apt-month-label">—</span></div>
             <div style="font-family:'Geist Mono',monospace;font-size:1.5rem;font-weight:600" id="apt-count">0</div>
           </div>
+          <button class="help-btn" onclick="showHelp(event,'Riepilogo del mese: guadagno stimato dagli appuntamenti confermati e conteggio totale. Questi valori non influenzano i totali reali nella home.')" style="position:absolute;top:0.75rem;right:0.75rem">?</button>
         </div>
         <div class="card">
-          <div class="card-header"><span class="card-title">Appuntamenti del mese</span></div>
+          <div class="card-header"><span class="card-title">Appuntamenti del mese</span><button class="help-btn" onclick="showHelp(event,'Calendario degli appuntamenti del mese. Clicca un giorno per filtrare il log. Usa il tasto doppia spunta su un appuntamento per aggiungere l entrata nella home.')">?</button></div>
           <div id="apt-calendar"></div>
           <div id="apt-log-label" style="padding:0 1.25rem 0.5rem;font-size:0.68rem;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:0.05em">Log</div>
           <div id="apt-list"></div>
@@ -925,7 +939,7 @@ input[type="time"]::-webkit-datetime-edit-ampm-field { display:none; }
   <div id="section-settings" style="display:none">
     <div class="settings-wrapper">
       <div class="card">
-        <div class="card-header"><span class="card-title">Percentuali Fiscali</span></div>
+        <div class="card-header"><span class="card-title">Percentuali Fiscali</span><button class="help-btn" onclick="showHelp(event,'Quota studio: percentuale del lordo che lasci allo studio. Tasse: aliquota sulle entrate segnate come tassabili. Entrambe si applicano in automatico al calcolo del netto.')">?</button></div>
         <div class="form-body">
           <div class="form-group">
             <label class="form-label">Quota Studio (%)</label>
@@ -939,7 +953,7 @@ input[type="time"]::-webkit-datetime-edit-ampm-field { display:none; }
         </div>
       </div>
       <div class="card" style="margin-top:1.25rem">
-        <div class="card-header"><span class="card-title">Account</span></div>
+        <div class="card-header"><span class="card-title">Account</span><button class="help-btn" onclick="showHelp(event,'Visualizza la tua email e gestisci l accesso. Da qui puoi disconnetterti dall app.')">?</button></div>
         <div class="form-body">
           <div style="font-size:0.82rem;color:var(--text2);margin-bottom:0.6rem">Email: <strong id="settings-email">—</strong></div>
           <div style="font-size:0.82rem;color:var(--text2);margin-bottom:1.25rem">Abbonamento: <strong id="settings-sub">—</strong></div>
@@ -984,6 +998,26 @@ const MONTHS_SHORT = ['Gen','Feb','Mar','Apr','Mag','Giu','Lug','Ago','Set','Ott
 // =====================================================
 // INIT
 // =====================================================
+function showHelp(event, text) {
+  event.stopPropagation();
+  const tip = document.getElementById('help-tooltip');
+  tip.textContent = text;
+  tip.style.display = 'block';
+  const rect = event.currentTarget.getBoundingClientRect();
+  const tipW = 220;
+  let left = rect.left - tipW - 10;
+  if (left < 8) left = Math.min(rect.right + 10, window.innerWidth - tipW - 8);
+  let top = rect.top;
+  if (top + 160 > window.innerHeight) top = window.innerHeight - 170;
+  if (top < 8) top = 8;
+  tip.style.left = left + 'px';
+  tip.style.top  = top + 'px';
+}
+document.addEventListener('click', () => {
+  const t = document.getElementById('help-tooltip');
+  if (t) t.style.display = 'none';
+});
+
 window.addEventListener('DOMContentLoaded', async () => {
   // Se dopo 8 secondi il loading screen è ancora lì, mostra errore
   const loadingTimeout = setTimeout(() => {
@@ -1543,7 +1577,7 @@ function render() {
 }
 
 function updateLabels() {
-  document.getElementById('label-studio').textContent    = STUDIO_PCT === 0 ? 'Quota studio (non presente)' : `Allo studio (${(STUDIO_PCT*100).toFixed(0)}%)`;
+  document.getElementById('label-studio').textContent    = STUDIO_PCT === 0 ? 'Quota studio (non presente)' : `Quota studio (${(STUDIO_PCT*100).toFixed(0)}%)`;
   document.getElementById('label-tax').textContent       = `Tasse (${(TAX_PCT*100).toFixed(0)}%)`;
   document.getElementById('label-tax-check').textContent = `Applica tasse (${(TAX_PCT*100).toFixed(0)}%)`;
 }
