@@ -721,8 +721,11 @@ input[type="time"]::-webkit-datetime-edit-ampm-field { display:none; }
     <p>Gestisci le tue finanze da tatuatore, ovunque e da qualsiasi dispositivo.</p>
     <div class="paywall-price">€9,99</div>
     <div class="paywall-period">all'anno · accesso completo · tutti i dispositivi</div>
-    <button class="btn-subscribe" onclick="goToCheckout()">Abbonati ora →</button>
-    <div style="margin-top:1.25rem">
+    <button class="btn-subscribe" id="btn-subscribe" onclick="goToCheckout()">Abbonati ora →</button>
+    <div style="margin-top:1rem">
+      <button onclick="waitForActivation()" style="background:none;border:none;cursor:pointer;font-size:0.78rem;color:var(--gold);text-decoration:underline">Ho già pagato — attiva il mio account</button>
+    </div>
+    <div style="margin-top:0.5rem">
       <button onclick="confirmLogout()" style="background:none;border:none;cursor:pointer;font-size:0.72rem;color:var(--text3)">Esci dall'account</button>
     </div>
   </div>
@@ -1341,7 +1344,7 @@ function goToCheckout() {
 }
 
 async function waitForActivation() {
-  const btn = document.querySelector('.btn-subscribe');
+  const btn = document.getElementById('btn-subscribe');
   if (btn) { btn.textContent = 'Attivazione in corso...'; btn.disabled = true; }
   let attempts = 0;
   const poll = async () => {
