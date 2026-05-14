@@ -423,8 +423,11 @@ input[type="time"]::-webkit-datetime-edit-ampm-field { display:none; }
 /* ---- APT MINI CALENDAR ---- */
 .apt-cal-grid { display:grid; grid-template-columns:repeat(7,1fr); gap:2px; padding:0.75rem 0.75rem 0.25rem; }
 .apt-cal-lbl { text-align:center; font-size:0.58rem; color:var(--text3); font-weight:600; text-transform:uppercase; padding:0.2rem 0 0.4rem; }
-.apt-cal-cell { text-align:center; padding:0.25rem 0.1rem; border-radius:6px; min-height:38px; display:flex; flex-direction:column; align-items:center; gap:2px; }
+.apt-cal-cell { text-align:center; padding:0.25rem 0.1rem; border-radius:6px; min-height:38px; display:flex; flex-direction:column; align-items:center; gap:2px; cursor:pointer; transition:background 0.12s; }
+.apt-cal-cell:hover { background:rgba(255,255,255,0.05); }
 .apt-cal-cell.has-apts { background:rgba(74,158,106,0.1); }
+.apt-cal-cell.has-apts:hover { background:rgba(74,158,106,0.18); }
+.apt-cal-cell.selected { background:rgba(232,184,75,0.18) !important; outline:1.5px solid var(--gold); outline-offset:-1px; }
 .apt-cal-dn { font-size:0.68rem; color:var(--text2); line-height:1; }
 .apt-cal-dn.is-today { font-weight:700; color:var(--text); }
 .apt-cal-dots { display:flex; gap:2px; align-items:center; justify-content:center; flex-wrap:wrap; }
@@ -892,7 +895,7 @@ input[type="time"]::-webkit-datetime-edit-ampm-field { display:none; }
         <div class="card">
           <div class="card-header"><span class="card-title">Appuntamenti del mese</span></div>
           <div id="apt-calendar"></div>
-          <div style="padding:0 1.25rem 0.5rem;font-size:0.68rem;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:0.05em">Log</div>
+          <div id="apt-log-label" style="padding:0 1.25rem 0.5rem;font-size:0.68rem;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:0.05em">Log</div>
           <div id="apt-list"></div>
         </div>
       </div>
@@ -1280,6 +1283,7 @@ function isUtcMidnight(data_ora) {
 let _editingAptId = null;
 let _riportaAptId = null;
 let _editingEntryType = null, _editingEntryId = null;
+let selectedAptDay = null;
 let speseRicorrenti = [], eccezioniRicorrenti = [], _editingRicId = null;
 
 function goToCheckout() {
@@ -1496,6 +1500,7 @@ async function changeMonth(dir) {
     ? now.getDate()
     : 1;
   document.getElementById('month-label').textContent = MONTHS[currentMonth] + ' ' + currentYear;
+  selectedAptDay = null;
   await loadMonthData();
   await loadRicorrenti().catch(() => {});
   if (currentSection === 'appointments') renderAppuntamenti();
@@ -1692,6 +1697,11 @@ function renderLog() {
     </tr>`).join('');
 }
 
+function selectAptDay(d) {
+  selectedAptDay = selectedAptDay === d ? null : d;
+  renderAppuntamenti();
+}
+
 function renderAptCalendar() {
   const calEl = document.getElementById('apt-calendar');
   if (!calEl) return;
@@ -1727,7 +1737,8 @@ function renderAptCalendar() {
       dots += '</div>';
     }
     const dnStyle = isSunday && !isToday ? ' style="color:var(--red)"' : '';
-    html += `<div class="apt-cal-cell${cnt > 0 ? ' has-apts' : ''}">
+    const isSelected = d === selectedAptDay;
+    html += `<div class="apt-cal-cell${cnt > 0 ? ' has-apts' : ''}${isSelected ? ' selected' : ''}" onclick="selectAptDay(${d})">
       <div class="apt-cal-dn${isToday ? ' is-today' : ''}"${dnStyle}>${d}</div>${dots}
     </div>`;
   }
@@ -1750,15 +1761,35 @@ function renderAppuntamenti() {
   renderAptCalendar();
 
   const listEl = document.getElementById('apt-list');
+  const logLabel = document.getElementById('apt-log-label');
+
+  const displayed = selectedAptDay
+    ? sorted.filter(a => {
+        if (!a.data_ora) return false;
+        const parts = new Date(a.data_ora).toLocaleDateString('sv').split('-');
+        return parseInt(parts[2]) === selectedAptDay;
+      })
+    : sorted;
+
+  if (logLabel) {
+    logLabel.textContent = selectedAptDay
+      ? `${selectedAptDay}/${currentMonth + 1}/${currentYear}`
+      : 'Log';
+  }
+
   if (!sorted.length) {
     listEl.innerHTML = `<div style="text-align:center;padding:1.5rem;font-size:0.78rem;color:var(--text3)">Nessun appuntamento questo mese</div>`;
+    return;
+  }
+  if (!displayed.length) {
+    listEl.innerHTML = `<div style="text-align:center;padding:1.5rem;font-size:0.78rem;color:var(--text3)">Nessun appuntamento in questo giorno</div>`;
     return;
   }
 
   const statusColor = { confermato: 'var(--green)', in_attesa: '#c89c00', completato: 'var(--green)', cancellato: 'var(--red)' };
   const statusLabel = { confermato: '✓', in_attesa: '?', completato: '✓✓', cancellato: '✗' };
 
-  listEl.innerHTML = sorted.map(a => {
+  listEl.innerHTML = displayed.map(a => {
     const dt = a.data_ora ? new Date(a.data_ora) : null;
     const ld = dt ? dt.toLocaleDateString('sv') : null;
     const parts = ld ? ld.split('-') : [];
