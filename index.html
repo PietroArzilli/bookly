@@ -515,6 +515,22 @@ input[type="time"]::-webkit-datetime-edit-ampm-field { display:none; }
   </div>
 </div>
 
+<!-- RIPORTA ENTRATA OVERLAY -->
+<div id="riporta-overlay" style="display:none;position:fixed;inset:0;background:rgba(26,25,22,0.7);z-index:8100;align-items:center;justify-content:center;backdrop-filter:blur(4px);padding:1rem">
+  <div style="background:var(--surface);border-radius:var(--radius);padding:1.5rem;width:100%;max-width:320px;border:1px solid var(--border)">
+    <div style="font-size:1rem;font-weight:600;margin-bottom:0.5rem">Riporta nella home</div>
+    <div style="font-size:0.85rem;color:var(--text2);margin-bottom:1.25rem">Vuoi riportare l'entrata nella home?</div>
+    <label style="display:flex;align-items:center;gap:0.6rem;cursor:pointer;margin-bottom:1.5rem;font-size:0.85rem;user-select:none">
+      <input type="checkbox" id="riporta-tassata" style="width:16px;height:16px;accent-color:var(--gold);cursor:pointer">
+      Applica tasse
+    </label>
+    <div style="display:flex;gap:0.75rem">
+      <button id="btn-confirm-riporta" onclick="confirmRiportaEntrata()" style="flex:1;padding:0.7rem;background:var(--text);color:var(--bg);border:none;border-radius:var(--radius-sm);cursor:pointer;font-weight:600;font-size:0.85rem">Sì</button>
+      <button onclick="closeRiportaOverlay()" style="flex:1;padding:0.65rem;background:none;border:1px solid var(--border);border-radius:var(--radius-sm);cursor:pointer;font-size:0.82rem;color:var(--text2)">No</button>
+    </div>
+  </div>
+</div>
+
 <!-- EDIT APPOINTMENT MODAL -->
 <div id="edit-apt-overlay" style="display:none;position:fixed;inset:0;background:rgba(26,25,22,0.7);z-index:8000;align-items:center;justify-content:center;backdrop-filter:blur(4px);padding:1rem">
   <div class="edit-modal-body">
@@ -1237,6 +1253,7 @@ function isUtcMidnight(data_ora) {
   return d.getUTCHours() === 0 && d.getUTCMinutes() === 0 && d.getUTCSeconds() === 0;
 }
 let _editingAptId = null;
+let _riportaAptId = null;
 let speseRicorrenti = [], eccezioniRicorrenti = [], _editingRicId = null;
 
 function goToCheckout() {
@@ -1401,6 +1418,43 @@ async function deleteAppuntamento(id) {
   } else {
     console.error('deleteAppuntamento error:', error);
     showToast('Errore eliminazione: ' + (error.message || 'Riprovare'));
+  }
+}
+
+function openRiportaEntrata(id) {
+  _riportaAptId = id;
+  document.getElementById('riporta-tassata').checked = false;
+  document.getElementById('riporta-overlay').style.display = 'flex';
+}
+
+function closeRiportaOverlay() {
+  _riportaAptId = null;
+  document.getElementById('riporta-overlay').style.display = 'none';
+}
+
+async function confirmRiportaEntrata() {
+  if (!_riportaAptId || !currentUser) return;
+  const apt = _aptById[_riportaAptId];
+  if (!apt) return;
+  const tassata = document.getElementById('riporta-tassata').checked;
+  const aptDate = apt.data_ora ? new Date(apt.data_ora).toLocaleDateString('sv') : new Date().toLocaleDateString('sv');
+  const desc = apt.nome_cliente + (apt.note ? ' — ' + apt.note : '');
+  const importo = parseFloat(apt.importo_previsto || 0);
+  const btn = document.getElementById('btn-confirm-riporta');
+  if (btn) btn.disabled = true;
+  const { data, error } = await sb.from('entrate').insert({
+    user_id: currentUser.id, importo, descrizione: desc, data: aptDate, tassata
+  }).select().single();
+  if (btn) btn.disabled = false;
+  if (!error && data) {
+    const { start, end } = monthRange();
+    if (aptDate >= start && aptDate <= end) entrate.push(data);
+    closeRiportaOverlay();
+    showToast('Entrata aggiunta alla home');
+    render();
+  } else {
+    console.error('confirmRiportaEntrata error:', error);
+    showToast('Errore: ' + (error?.message || 'Riprovare'));
   }
 }
 
@@ -1646,6 +1700,7 @@ function renderAppuntamenti() {
         ${subParts ? `<div class="apt-log-sub">${subParts} <span style="color:${statusColor[a.stato]}">${statusLabel[a.stato]||''}</span></div>` : `<div class="apt-log-sub"><span style="color:${statusColor[a.stato]}">${statusLabel[a.stato]||''}</span></div>`}
       </div>
       <div class="apt-log-actions">
+        ${a.stato !== 'cancellato' ? `<button class="btn-convert" onclick="openRiportaEntrata('${a.id}')" title="Riporta entrata nella home">✓✓</button>` : ''}
         <button class="btn-edit-apt" onclick="editAppuntamento('${a.id}')" title="Modifica">✎</button>
         <button class="btn-del-apt" onclick="deleteAppuntamento('${a.id}')" title="Elimina">×</button>
       </div>
