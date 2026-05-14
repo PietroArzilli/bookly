@@ -1703,7 +1703,18 @@ function buildLogRows() {
   ].sort((a, b) => b.day - a.day);
 }
 
+function buildLastInserted() {
+  return [
+    ...entrate.map(e => ({ ...e, type: 'income',  day: parseInt((e.data || '').split('-')[2]) })),
+    ...uscite.map(e  => ({ ...e, type: 'expense', day: parseInt((e.data || '').split('-')[2]) }))
+  ].sort((a, b) => Number(b.id) - Number(a.id)).slice(0, 3);
+}
+
 function logRowHtml(r) {
+  const editBtn = !r.isRic ? `<button class="btn-edit-apt" onclick="openEditEntry('${r.type}','${r.id}')" title="Modifica">✎</button>` : '';
+  const delBtn  = r.isRic
+    ? `<button class="entry-del" onclick="skipRicorrente('${r.id}')" title="Salta questo mese">×</button>`
+    : `<button class="entry-del" onclick="deleteEntry('${r.type}','${r.id}')">×</button>`;
   return `
     <tr>
       <td class="mono">${r.day}/${currentMonth + 1}</td>
@@ -1711,21 +1722,18 @@ function logRowHtml(r) {
       <td>${r.descrizione || '—'}</td>
       <td class="mono">${r.type === 'income' ? (r.tassata ? 'Sì' : 'No') : '—'}</td>
       <td style="text-align:right;color:${r.type === 'income' ? 'var(--green)' : 'var(--red)'}" class="mono">€${parseFloat(r.importo).toFixed(2)}</td>
-      <td>${r.isRic
-        ? `<button class="entry-del" onclick="skipRicorrente('${r.id}')" title="Salta questo mese">×</button>`
-        : `<button class="entry-del" onclick="deleteEntry('${r.type}','${r.id}')">×</button>`}
-      </td>
+      <td style="white-space:nowrap">${editBtn}${delBtn}</td>
     </tr>`;
 }
 
 function renderLog() {
-  const rows = buildLogRows();
   const tbody = document.getElementById('log-tbody');
-  if (!rows.length) {
+  const preview = buildLastInserted();
+  if (!preview.length) {
     tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;padding:1.5rem;color:var(--text3);font-size:0.78rem">Nessuna voce questo mese</td></tr>`;
     return;
   }
-  tbody.innerHTML = rows.slice(0, 3).map(logRowHtml).join('');
+  tbody.innerHTML = preview.map(logRowHtml).join('');
 }
 
 function openRecapAll() {
