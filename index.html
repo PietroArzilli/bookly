@@ -381,7 +381,7 @@ input[type="time"]::-webkit-datetime-edit-ampm-field { display:none; }
 .entry-item { display:flex; align-items:center; justify-content:space-between; padding:0.65rem 0.75rem; border-radius:var(--radius-sm); font-size:0.82rem; }
 .entry-item.income { background:var(--green-bg); border:1px solid var(--green-bd); }
 .entry-item.expense { background:var(--red-bg); border:1px solid var(--red-bd); }
-.entry-del { background:none; border:none; cursor:pointer; color:var(--text3); font-size:1.1rem; line-height:1; }
+.entry-del { background:none; border:1px solid transparent; border-radius:var(--radius-sm); cursor:pointer; color:var(--text3); font-size:0.85rem; line-height:1; padding:0.28rem 0.42rem; display:inline-flex; align-items:center; }
 .entry-del:hover { color:var(--red); }
 .calc-row { display:flex; justify-content:space-between; padding:0.65rem 1.25rem; border-bottom:1px solid var(--border); font-size:0.82rem; }
 .calc-total { display:flex; justify-content:space-between; align-items:center; padding:1rem 1.25rem; background:var(--surface2); border-radius:0 0 var(--radius) var(--radius); }
@@ -440,7 +440,7 @@ input[type="time"]::-webkit-datetime-edit-ampm-field { display:none; }
 .apt-log-name { font-size:0.8rem; font-weight:500; flex:1; min-width:0; }
 .apt-log-sub { font-size:0.67rem; color:var(--text3); margin-top:1px; }
 .apt-log-actions { display:flex; gap:0.35rem; align-items:center; flex-shrink:0; }
-.btn-edit-apt { padding:0.25rem 0.45rem; background:none; color:var(--text3); border:1px solid var(--border); border-radius:var(--radius-sm); font-size:0.62rem; cursor:pointer; }
+.btn-edit-apt { padding:0.28rem 0.5rem; background:none; color:var(--text3); border:1px solid var(--border); border-radius:var(--radius-sm); font-size:0.7rem; line-height:1; cursor:pointer; display:inline-flex; align-items:center; }
 .btn-edit-apt:hover { color:var(--text); border-color:var(--text2); }
 /* ---- RICORRENTI ---- */
 .btn-ric-link { width:100%; margin-top:0.6rem; padding:0.45rem 0.75rem; background:none; border:1px dashed var(--border); border-radius:var(--radius-sm); font-size:0.72rem; color:var(--text3); cursor:pointer; display:flex; align-items:center; gap:0.4rem; justify-content:center; }
@@ -1722,7 +1722,7 @@ function logRowHtml(r) {
       <td>${r.descrizione || '—'}</td>
       <td class="mono">${r.type === 'income' ? (r.tassata ? 'Sì' : 'No') : '—'}</td>
       <td style="text-align:right;color:${r.type === 'income' ? 'var(--green)' : 'var(--red)'}" class="mono">€${parseFloat(r.importo).toFixed(2)}</td>
-      <td style="white-space:nowrap">${editBtn}${delBtn}</td>
+      <td><div style="display:flex;align-items:center;justify-content:flex-end;gap:6px">${editBtn}${delBtn}</div></td>
     </tr>`;
 }
 
