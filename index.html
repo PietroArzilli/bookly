@@ -1065,7 +1065,11 @@ async function afterLogin() {
   }
 
   if (!userProfile?.setup_done)          { showView('setup');   return; }
-  if (!userProfile?.subscription_active) { showView('paywall'); return; }
+  if (!userProfile?.subscription_active) {
+    showView('paywall');
+    if (new URLSearchParams(window.location.search).get('subscribed') === '1') waitForActivation();
+    return;
+  }
   document.getElementById('user-email-display').textContent = currentUser.email;
   await Promise.all([loadMonthData(), loadRicorrenti()]);
   showView('app');
@@ -1328,8 +1332,37 @@ let selectedAptDay = null;
 let speseRicorrenti = [], eccezioniRicorrenti = [], _editingRicId = null;
 
 function goToCheckout() {
-  // TODO: sostituire con URL della tua Supabase Edge Function per Stripe
-  showToast('Checkout Stripe da configurare (vedi Edge Functions)');
+  if (!currentUser) return;
+  const base = 'https://inkbookss.lemonsqueezy.com/checkout/buy/a88fcb09-4446-4b5b-9ed8-e9d97b82f731';
+  const userId = encodeURIComponent(currentUser.id);
+  const email  = encodeURIComponent(currentUser.email || '');
+  window.location.href = `${base}?checkout[custom][user_id]=${userId}&checkout[email]=${email}`;
+}
+
+async function waitForActivation() {
+  const btn = document.querySelector('.btn-subscribe');
+  if (btn) { btn.textContent = 'Attivazione in corso...'; btn.disabled = true; }
+  let attempts = 0;
+  const poll = async () => {
+    attempts++;
+    await loadProfile();
+    if (userProfile?.subscription_active) {
+      history.replaceState({}, '', window.location.pathname);
+      document.getElementById('user-email-display').textContent = currentUser.email;
+      await Promise.all([loadMonthData(), loadRicorrenti()]);
+      showView('app');
+      render();
+      showToast('Abbonamento attivato! Benvenuto.');
+      return;
+    }
+    if (attempts < 10) { setTimeout(poll, 3000); }
+    else {
+      if (btn) { btn.textContent = 'Abbonati ora →'; btn.disabled = false; }
+      history.replaceState({}, '', window.location.pathname);
+      showToast('Attivazione in corso, ricarica tra qualche secondo.');
+    }
+  };
+  setTimeout(poll, 3000);
 }
 
 // =====================================================
