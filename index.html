@@ -487,26 +487,32 @@ body {
 .cal-nav-btn:active { background:var(--accent-light); }
 
 /* ── CALENDARIO: griglia ── */
-.cal-weekdays { display:grid; grid-template-columns:repeat(7,1fr); padding:.55rem .5rem .25rem; background:var(--surface); }
-.cal-weekday  { text-align:center; font-size:.58rem; font-weight:700; color:var(--text3); text-transform:uppercase; letter-spacing:.03em; }
-.cal-grid     { display:grid; grid-template-columns:repeat(7,1fr); gap:1px; background:var(--border); margin:0 .5rem .75rem; border-radius:var(--radius-sm); overflow:hidden; }
-/* Celle */
-.cal-cell { display:flex; flex-direction:column; align-items:stretch; cursor:pointer; min-height:72px; padding:5px 3px 3px; background:var(--surface); overflow:hidden; transition:background .12s; }
-.cal-cell:active:not(.empty) { background:#f0f4ff; }
-.cal-cell.empty { cursor:default; background:var(--surface2); }
-/* Numero giorno — badge circolare */
-.cal-num-wrap { display:flex; justify-content:center; margin-bottom:3px; flex-shrink:0; }
-.cal-day-num  { width:22px; height:22px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:.76rem; font-weight:500; color:var(--text); }
-.cal-cell.weekend .cal-day-num { color:var(--text3); }
-.cal-cell.cal-today:not(.cal-selected) .cal-day-num { background:var(--accent-light); color:var(--accent); font-weight:800; }
-.cal-cell.cal-selected .cal-day-num { background:var(--accent); color:#fff !important; font-weight:800; }
-/* Chip evento inline */
-.cal-chip { display:block; font-size:.51rem; font-weight:600; line-height:1.55; padding:0 3px; border-radius:2px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; margin-bottom:1px; }
-.cal-chip.apt      { background:var(--amber-light); color:var(--amber); }
-.cal-chip.income   { background:var(--green-light);  color:var(--green); }
-.cal-chip.expense  { background:var(--red-light);    color:var(--red); }
-.cal-chip.reminder { background:var(--accent-light); color:var(--accent); }
-.cal-chip.more     { color:var(--text3); font-size:.48rem; }
+.cal-weekdays { display:grid; grid-template-columns:repeat(7,1fr); padding:.6rem .75rem .2rem; background:var(--surface); }
+.cal-weekday  { text-align:center; font-size:.6rem; font-weight:600; color:var(--text3); letter-spacing:.02em; }
+.cal-grid     { display:grid; grid-template-columns:repeat(7,1fr); gap:0; padding:.15rem .5rem .6rem; background:var(--surface); }
+/* Celle: aperte, senza bordi, numeri galleggianti */
+.cal-cell { display:flex; flex-direction:column; align-items:center; cursor:pointer; padding:3px 1px 4px; min-height:62px; overflow:hidden; border-radius:10px; transition:background .14s; }
+.cal-cell:active:not(.empty) { background:rgba(0,0,0,.05); }
+.cal-cell.empty { cursor:default; }
+/* Badge numero giorno */
+.cal-num-wrap { margin-bottom:3px; }
+.cal-day-num  { width:28px; height:28px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:.82rem; font-weight:400; color:var(--text); letter-spacing:-.01em; }
+.cal-cell.weekend .cal-day-num { color:var(--text3); font-weight:400; }
+.cal-cell.cal-today .cal-day-num { background:var(--accent); color:#fff; font-weight:700; }
+.cal-cell.cal-selected:not(.cal-today) .cal-day-num { background:var(--text); color:#fff; font-weight:600; }
+/* Evento primario (una riga, testo troncato) */
+.cal-ev-chip { display:block; font-size:.5rem; font-weight:600; line-height:1.5; padding:1px 4px; border-radius:3px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; width:calc(100% - 2px); }
+.cal-ev-chip.apt      { background:var(--amber-light); color:var(--amber); }
+.cal-ev-chip.income   { background:var(--green-light); color:var(--green); }
+.cal-ev-chip.expense  { background:var(--red-light);   color:var(--red); }
+.cal-ev-chip.reminder { background:var(--accent-light);color:var(--accent); }
+/* Pallini per eventi aggiuntivi */
+.cal-dots-row { display:flex; gap:2px; justify-content:center; margin-top:3px; }
+.cal-tiny-dot { width:4px; height:4px; border-radius:50%; flex-shrink:0; }
+.cal-tiny-dot.apt      { background:var(--amber); }
+.cal-tiny-dot.income   { background:var(--green); }
+.cal-tiny-dot.expense  { background:var(--red); }
+.cal-tiny-dot.reminder { background:var(--accent); }
 
 /* ── CALENDARIO: eventi del giorno ── */
 .day-events-bar { display:flex; align-items:center; justify-content:space-between; padding:.65rem 1rem .35rem; }
@@ -1898,11 +1904,7 @@ function renderCalGrid() {
   for (let d = 1; d <= daysInMo; d++) {
     const ds  = dayStr(d);
     const dow = new Date(currentYear, currentMonth, d).getDay();
-    const isWeekend  = dow === 0 || dow === 6;
-    const isToday    = currentYear === todayY && currentMonth === todayM && d === todayD;
-    const isSelected = d === selectedDay;
 
-    // Raccoglie tutti gli eventi del giorno come chip
     const apts_d = (appuntamenti || []).filter(a => {
       if (!a.data_ora) return false;
       return new Date(a.data_ora).toLocaleDateString('sv', { timeZone:'Europe/Rome' }) === ds;
@@ -1912,29 +1914,49 @@ function renderCalGrid() {
     const ric_d = getRicorrentiForDay(d);
     const rem_d = getReminders(ds);
 
-    const allChips = [
-      ...apts_d.map(a => ({ t:'apt',      l: a.nome_cliente || 'Appunt.' })),
-      ...inc_d.map(e  => ({ t:'income',   l: e.descrizione  || `+€${parseFloat(e.importo||0).toFixed(0)}` })),
-      ...exp_d.map(e  => ({ t:'expense',  l: e.descrizione  || `-€${parseFloat(e.importo||0).toFixed(0)}` })),
-      ...ric_d.map(r  => ({ t:'expense',  l: r.descrizione  || 'Ricorrente' })),
-      ...rem_d.map(r  => ({ t:'reminder', l: r.text         || 'Reminder' })),
-    ];
+    // Evento prioritario (apt > entrata > uscita > reminder) — chip testo
+    let primaryChip = '';
+    let extras = [];   // dots per gli altri eventi
 
-    const MAX = 3;
-    let chipsHtml = allChips.slice(0, MAX)
-      .map(c => `<span class="cal-chip ${c.t}">${escHtml(c.l)}</span>`)
-      .join('');
-    if (allChips.length > MAX)
-      chipsHtml += `<span class="cal-chip more">+${allChips.length - MAX} altri</span>`;
+    if (apts_d.length) {
+      primaryChip = `<div class="cal-ev-chip apt">${escHtml(apts_d[0].nome_cliente || 'Appunt.')}</div>`;
+      extras = [
+        ...apts_d.slice(1).map(() => 'apt'),
+        ...inc_d.map(() => 'income'),
+        ...exp_d.map(() => 'expense'), ...ric_d.map(() => 'expense'),
+        ...rem_d.map(() => 'reminder'),
+      ];
+    } else if (inc_d.length) {
+      const label = inc_d[0].descrizione || `+€${parseFloat(inc_d[0].importo||0).toFixed(0)}`;
+      primaryChip = `<div class="cal-ev-chip income">${escHtml(label)}</div>`;
+      extras = [
+        ...inc_d.slice(1).map(() => 'income'),
+        ...exp_d.map(() => 'expense'), ...ric_d.map(() => 'expense'),
+        ...rem_d.map(() => 'reminder'),
+      ];
+    } else if (exp_d.length || ric_d.length) {
+      const allExp = [...exp_d, ...ric_d];
+      const label  = allExp[0].descrizione || `-€${parseFloat(allExp[0].importo||0).toFixed(0)}`;
+      primaryChip  = `<div class="cal-ev-chip expense">${escHtml(label)}</div>`;
+      extras = [...allExp.slice(1).map(() => 'expense'), ...rem_d.map(() => 'reminder')];
+    } else if (rem_d.length) {
+      primaryChip = `<div class="cal-ev-chip reminder">${escHtml(rem_d[0].text || 'Reminder')}</div>`;
+      extras = rem_d.slice(1).map(() => 'reminder');
+    }
+
+    const dotsHtml = extras.slice(0, 3)
+      .map(t => `<span class="cal-tiny-dot ${t}"></span>`).join('');
+    const dotsRow = dotsHtml
+      ? `<div class="cal-dots-row">${dotsHtml}</div>` : '';
 
     let cls = 'cal-cell';
-    if (isWeekend)  cls += ' weekend';
-    if (isToday)    cls += ' cal-today';
-    if (isSelected) cls += ' cal-selected';
+    if (dow === 0 || dow === 6) cls += ' weekend';
+    if (currentYear === todayY && currentMonth === todayM && d === todayD) cls += ' cal-today';
+    if (d === selectedDay) cls += ' cal-selected';
 
     cells += `<div class="${cls}" onclick="selectCalDay(${d})">
       <div class="cal-num-wrap"><div class="cal-day-num">${d}</div></div>
-      ${chipsHtml}
+      ${primaryChip}${dotsRow}
     </div>`;
   }
 
