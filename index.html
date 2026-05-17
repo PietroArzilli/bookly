@@ -487,23 +487,26 @@ body {
 .cal-nav-btn:active { background:var(--accent-light); }
 
 /* ── CALENDARIO: griglia ── */
-.cal-weekdays { display:grid; grid-template-columns:repeat(7,1fr); padding:.5rem .75rem .15rem; background:var(--surface); }
-.cal-weekday { text-align:center; font-size:.6rem; font-weight:700; color:var(--text3); text-transform:uppercase; letter-spacing:.03em; }
-.cal-grid { display:grid; grid-template-columns:repeat(7,1fr); gap:2px; padding:.2rem .75rem .85rem; background:var(--surface); }
-.cal-cell { aspect-ratio:1; display:flex; flex-direction:column; align-items:center; justify-content:center; border-radius:var(--radius-sm); cursor:pointer; min-height:40px; transition:background .1s; }
-.cal-cell:active:not(.empty) { background:var(--surface2); }
-.cal-cell.empty { cursor:default; }
-.cal-cell.weekend:not(.cal-selected) .cal-day-num { color:var(--text3); }
-.cal-cell.cal-today:not(.cal-selected) .cal-day-num { color:var(--accent); font-weight:800; }
-.cal-cell.cal-selected { background:var(--accent) !important; }
-.cal-cell.cal-selected .cal-day-num { color:#fff !important; font-weight:800; }
-.cal-day-num { font-size:.82rem; color:var(--text); line-height:1; }
-.cal-dots { display:flex; gap:2px; margin-top:3px; justify-content:center; }
-.cal-dot { width:5px; height:5px; border-radius:50%; flex-shrink:0; }
-.cal-dot.income { background:var(--green); }
-.cal-dot.expense { background:var(--red); }
-.cal-dot.apt { background:var(--amber); }
-.cal-dot.reminder { background:var(--accent); }
+.cal-weekdays { display:grid; grid-template-columns:repeat(7,1fr); padding:.55rem .5rem .25rem; background:var(--surface); }
+.cal-weekday  { text-align:center; font-size:.58rem; font-weight:700; color:var(--text3); text-transform:uppercase; letter-spacing:.03em; }
+.cal-grid     { display:grid; grid-template-columns:repeat(7,1fr); gap:1px; background:var(--border); margin:0 .5rem .75rem; border-radius:var(--radius-sm); overflow:hidden; }
+/* Celle */
+.cal-cell { display:flex; flex-direction:column; align-items:stretch; cursor:pointer; min-height:72px; padding:5px 3px 3px; background:var(--surface); overflow:hidden; transition:background .12s; }
+.cal-cell:active:not(.empty) { background:#f0f4ff; }
+.cal-cell.empty { cursor:default; background:var(--surface2); }
+/* Numero giorno — badge circolare */
+.cal-num-wrap { display:flex; justify-content:center; margin-bottom:3px; flex-shrink:0; }
+.cal-day-num  { width:22px; height:22px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:.76rem; font-weight:500; color:var(--text); }
+.cal-cell.weekend .cal-day-num { color:var(--text3); }
+.cal-cell.cal-today:not(.cal-selected) .cal-day-num { background:var(--accent-light); color:var(--accent); font-weight:800; }
+.cal-cell.cal-selected .cal-day-num { background:var(--accent); color:#fff !important; font-weight:800; }
+/* Chip evento inline */
+.cal-chip { display:block; font-size:.51rem; font-weight:600; line-height:1.55; padding:0 3px; border-radius:2px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; margin-bottom:1px; }
+.cal-chip.apt      { background:var(--amber-light); color:var(--amber); }
+.cal-chip.income   { background:var(--green-light);  color:var(--green); }
+.cal-chip.expense  { background:var(--red-light);    color:var(--red); }
+.cal-chip.reminder { background:var(--accent-light); color:var(--accent); }
+.cal-chip.more     { color:var(--text3); font-size:.48rem; }
 
 /* ── CALENDARIO: eventi del giorno ── */
 .day-events-bar { display:flex; align-items:center; justify-content:space-between; padding:.65rem 1rem .35rem; }
@@ -899,14 +902,6 @@ body {
 
         <!-- Griglia giorni (popolata da renderCalGrid) -->
         <div class="cal-grid" id="cal-grid"></div>
-
-        <!-- Legenda pallini -->
-        <div style="display:flex;gap:1rem;padding:.4rem 1rem .6rem;background:var(--surface);border-bottom:1px solid var(--border)">
-          <span style="display:flex;align-items:center;gap:.3rem;font-size:.65rem;color:var(--text3)"><span class="cal-dot income"></span>Entrata</span>
-          <span style="display:flex;align-items:center;gap:.3rem;font-size:.65rem;color:var(--text3)"><span class="cal-dot expense"></span>Uscita</span>
-          <span style="display:flex;align-items:center;gap:.3rem;font-size:.65rem;color:var(--text3)"><span class="cal-dot apt"></span>Appunt.</span>
-          <span style="display:flex;align-items:center;gap:.3rem;font-size:.65rem;color:var(--text3)"><span class="cal-dot reminder"></span>Reminder</span>
-        </div>
 
         <!-- Lista eventi giorno selezionato -->
         <div class="section-inner" style="padding-top:.75rem">
@@ -1891,15 +1886,13 @@ function renderCalGrid() {
   const grid = document.getElementById('cal-grid');
   if (!grid) return;
 
-  const firstDow  = new Date(currentYear, currentMonth, 1).getDay(); // 0=dom
-  const offset    = firstDow === 0 ? 6 : firstDow - 1;              // lun-based
-  const daysInMo  = new Date(currentYear, currentMonth + 1, 0).getDate();
-  const now       = new Date();
-  const todayY    = now.getFullYear(), todayM = now.getMonth(), todayD = now.getDate();
+  const firstDow = new Date(currentYear, currentMonth, 1).getDay();
+  const offset   = firstDow === 0 ? 6 : firstDow - 1;
+  const daysInMo = new Date(currentYear, currentMonth + 1, 0).getDate();
+  const now      = new Date();
+  const todayY   = now.getFullYear(), todayM = now.getMonth(), todayD = now.getDate();
 
   let cells = '';
-
-  // Celle vuote prima del 1°
   for (let i = 0; i < offset; i++) cells += '<div class="cal-cell empty"></div>';
 
   for (let d = 1; d <= daysInMo; d++) {
@@ -1909,22 +1902,30 @@ function renderCalGrid() {
     const isToday    = currentYear === todayY && currentMonth === todayM && d === todayD;
     const isSelected = d === selectedDay;
 
-    // Indica se ci sono dati per questo giorno
-    const hasIncome   = (entrate || []).some(e => e.data === ds);
-    const hasExpense  = (uscite  || []).some(e => e.data === ds)
-                      || getRicorrentiForDay(d).length > 0;
-    const hasApt      = (appuntamenti || []).some(a => {
+    // Raccoglie tutti gli eventi del giorno come chip
+    const apts_d = (appuntamenti || []).filter(a => {
       if (!a.data_ora) return false;
-      return new Date(a.data_ora).toLocaleDateString('sv', { timeZone: 'Europe/Rome' }) === ds;
+      return new Date(a.data_ora).toLocaleDateString('sv', { timeZone:'Europe/Rome' }) === ds;
     });
-    const hasReminder = getReminders(ds).length > 0;
+    const inc_d = (entrate || []).filter(e => e.data === ds);
+    const exp_d = (uscite  || []).filter(e => e.data === ds);
+    const ric_d = getRicorrentiForDay(d);
+    const rem_d = getReminders(ds);
 
-    // Pallini (max 4, uno per tipo)
-    let dots = '';
-    if (hasIncome)   dots += '<div class="cal-dot income"></div>';
-    if (hasExpense)  dots += '<div class="cal-dot expense"></div>';
-    if (hasApt)      dots += '<div class="cal-dot apt"></div>';
-    if (hasReminder) dots += '<div class="cal-dot reminder"></div>';
+    const allChips = [
+      ...apts_d.map(a => ({ t:'apt',      l: a.nome_cliente || 'Appunt.' })),
+      ...inc_d.map(e  => ({ t:'income',   l: e.descrizione  || `+€${parseFloat(e.importo||0).toFixed(0)}` })),
+      ...exp_d.map(e  => ({ t:'expense',  l: e.descrizione  || `-€${parseFloat(e.importo||0).toFixed(0)}` })),
+      ...ric_d.map(r  => ({ t:'expense',  l: r.descrizione  || 'Ricorrente' })),
+      ...rem_d.map(r  => ({ t:'reminder', l: r.text         || 'Reminder' })),
+    ];
+
+    const MAX = 3;
+    let chipsHtml = allChips.slice(0, MAX)
+      .map(c => `<span class="cal-chip ${c.t}">${escHtml(c.l)}</span>`)
+      .join('');
+    if (allChips.length > MAX)
+      chipsHtml += `<span class="cal-chip more">+${allChips.length - MAX} altri</span>`;
 
     let cls = 'cal-cell';
     if (isWeekend)  cls += ' weekend';
@@ -1932,8 +1933,8 @@ function renderCalGrid() {
     if (isSelected) cls += ' cal-selected';
 
     cells += `<div class="${cls}" onclick="selectCalDay(${d})">
-      <div class="cal-day-num">${d}</div>
-      ${dots ? `<div class="cal-dots">${dots}</div>` : ''}
+      <div class="cal-num-wrap"><div class="cal-day-num">${d}</div></div>
+      ${chipsHtml}
     </div>`;
   }
 
