@@ -2079,8 +2079,8 @@ function onPaywallNeeded() {
 
 async function onAppReady() {
   showScreen('app');
-  // Carica i dati del mese corrente, poi mostra la home
   await Promise.all([loadMonthData(), loadRicorrenti()]);
+  _saveCache();
   switchSection('home');
 }
 
@@ -3493,6 +3493,50 @@ function _showAuth() {
   switchAuth('login');
 }
 
+/* ─── Cache localStorage: render istantaneo al riavvio ─── */
+const _CV = 1; // bump per invalidare cache vecchie
+function _mkKey(uid) {
+  return `ib_v${_CV}_${uid}_${currentYear}_${currentMonth + 1}`;
+}
+function _profKey(uid) {
+  return `ib_v${_CV}_prof_${uid}`;
+}
+
+function _saveCache() {
+  if (!currentUser) return;
+  try {
+    localStorage.setItem(_profKey(currentUser.id), JSON.stringify(userProfile));
+    localStorage.setItem(_mkKey(currentUser.id), JSON.stringify({
+      entrate, uscite, appuntamenti, speseRicorrenti, eccezioniRicorrenti
+    }));
+  } catch(e) {}
+}
+
+function _tryInstantOpen(uid) {
+  try {
+    const prof = JSON.parse(localStorage.getItem(_profKey(uid)) || 'null');
+    if (!prof || !prof.setup_done || !prof.subscription_active) return false;
+
+    userProfile  = prof;
+    STUDIO_PCT   = (prof.percentuale_studio || 0) / 100;
+    TAX_PCT      = (prof.aliquota_tasse    || 0) / 100;
+    currentUser  = { id: uid };
+
+    const raw = JSON.parse(localStorage.getItem(_mkKey(uid)) || 'null');
+    if (raw) {
+      entrate             = raw.entrate             || [];
+      uscite              = raw.uscite              || [];
+      appuntamenti        = raw.appuntamenti        || [];
+      speseRicorrenti     = raw.speseRicorrenti     || [];
+      eccezioniRicorrenti = raw.eccezioniRicorrenti || [];
+    }
+
+    showScreen('app');
+    switchSection('home');
+    return true;
+  } catch(e) { return false; }
+}
+
 function _showLoadingError(msg) {
   const wrap = document.querySelector('#screen-loading > div');
   if (!wrap) return;
@@ -3547,10 +3591,13 @@ window.addEventListener('DOMContentLoaded', async () => {
       }
     });
 
-    // getSession() legge subito da localStorage — più veloce di aspettare l'evento
+    // getSession() legge subito da localStorage — istantaneo
     const { data, error } = await sb.auth.getSession();
     if (error) throw error;
     if (data.session?.user) {
+      // Render istantaneo da cache (se disponibile): l'utente vede la home subito
+      _tryInstantOpen(data.session.user.id);
+      // Poi carica dati freschi in background (aggiorna silenziosamente la UI)
       await _runAfterLogin(data.session.user);
     } else {
       _showAuth();
