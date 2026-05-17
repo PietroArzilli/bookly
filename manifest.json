@@ -1,0 +1,19 @@
+{
+  "name": "InkBooks",
+  "short_name": "InkBooks",
+  "description": "Gestione finance per tatuatori",
+  "start_url": "/inkbooks/",
+  "scope": "/inkbooks/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "theme_color": "#007aff",
+  "background_color": "#f2f2f7",
+  "icons": [
+    {
+      "src": "/inkbooks/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
