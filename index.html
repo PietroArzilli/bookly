@@ -1780,7 +1780,7 @@ function openRecapModal() {
        <span style="font-size:.75rem;font-weight:700;color:${color}">${total}</span>
      </div>`;
 
-  const _row = (date, desc, amtStr, extra) =>
+  const _row = (date, desc, amtStr, extra, actions) =>
     `<div style="display:flex;align-items:center;padding:.6rem 1.25rem;
                  border-bottom:1px solid var(--border);gap:.5rem">
        <span style="font-size:.8rem;color:var(--text3);min-width:2.5rem;flex-shrink:0">${date}</span>
@@ -1788,12 +1788,19 @@ function openRecapModal() {
                     text-overflow:ellipsis;white-space:nowrap">${escHtml(desc)}</span>
        ${extra || ''}
        <span style="font-size:.87rem;font-weight:700;flex-shrink:0;margin-left:auto">${amtStr}</span>
+       ${actions || ''}
      </div>`;
 
   const _empty = t =>
     `<div style="padding:.85rem 1.25rem;font-size:.84rem;color:var(--text3)">${t}</div>`;
 
   const d2 = s => s ? new Date(s + 'T00:00:00').toLocaleDateString('it-IT',{day:'2-digit',month:'2-digit'}) : '—';
+
+  const _btns = (type, id) =>
+    `<span style="display:flex;gap:.25rem;flex-shrink:0">
+       <button class="entry-btn" onclick="recapEditEntry('${type}','${id}')" title="Modifica">✎</button>
+       <button class="entry-btn del" onclick="recapDeleteEntry('${type}','${id}')" title="Elimina">✕</button>
+     </span>`;
 
   // ── Entrate ──────────────────────────────────────────────
   const inc = [...(entrate || [])].sort((a,b) => (a.data||'').localeCompare(b.data||''));
@@ -1805,7 +1812,7 @@ function openRecapModal() {
           ? `<span style="font-size:.6rem;background:var(--amber-light);color:var(--amber);
                           border-radius:3px;padding:.1rem .35rem;flex-shrink:0">tax</span>`
           : '';
-        return _row(d2(e.data), e.descrizione || '—', `<span style="color:var(--green)">${fmt(e.importo,'+')}</span>`, tag);
+        return _row(d2(e.data), e.descrizione || '—', `<span style="color:var(--green)">${fmt(e.importo,'+')}</span>`, tag, _btns('income', e.id));
       }).join('')
     : _empty('Nessuna entrata questo mese');
 
@@ -1815,7 +1822,7 @@ function openRecapModal() {
   html += _section('Uscite variabili', fmt(totExp,'−'), 'var(--red)');
   html += exp.length
     ? exp.map(e => _row(d2(e.data), e.descrizione || '—',
-        `<span style="color:var(--red)">${fmt(e.importo,'−')}</span>`)).join('')
+        `<span style="color:var(--red)">${fmt(e.importo,'−')}</span>`, null, _btns('expense', e.id))).join('')
     : _empty('Nessuna uscita questo mese');
 
   // ── Spese ricorrenti ──────────────────────────────────────
@@ -1852,6 +1859,19 @@ function openRecapModal() {
 
 function closeRecapModal() {
   document.getElementById('recap-modal').style.display = 'none';
+}
+
+function recapEditEntry(type, id) {
+  closeRecapModal();
+  homeOpenEdit(type, id);
+}
+
+async function recapDeleteEntry(type, id) {
+  const ok = await deleteEntry(type, id);
+  if (ok !== false) {
+    renderHomeView();
+    openRecapModal();
+  }
 }
 
 /* ═══════════════════════════════════════════════════════
@@ -2004,7 +2024,7 @@ function renderDayEvents(d) {
   // ② Entrate
   inc.forEach(e => {
     html += `<div class="day-event-item">
-      <div class="day-event-icon">💚</div>
+      <div class="day-event-icon">✅</div>
       <div class="day-event-info">
         <div class="day-event-title">${escHtml(e.descrizione || 'Entrata')}</div>
         <div class="day-event-sub" style="color:var(--green)">+€${parseFloat(e.importo).toFixed(2)}${e.tassata ? ' · tassata' : ''}</div>
