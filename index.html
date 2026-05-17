@@ -860,7 +860,11 @@ body {
 
           <!-- ④ RIEPILOGO MENSILE -->
           <div class="home-sum-header">
-            <span class="home-sum-title">Riepilogo mensile</span>
+            <button class="home-sum-title" onclick="openRecapModal()"
+              style="background:none;border:none;cursor:pointer;font-family:inherit;
+                     padding:0;display:flex;align-items:center;gap:.3rem">
+              Riepilogo mensile <span style="color:var(--accent);font-size:.8rem">›</span>
+            </button>
             <div class="home-sum-nav">
               <button class="home-sum-nav-btn" onclick="homeChangeMonth(-1)">‹</button>
               <span class="home-sum-month" id="home-sum-month">—</span>
@@ -1337,6 +1341,26 @@ body {
   </div>
 </div>
 
+<!-- ── MODAL RECAP MENSILE COMPLETO ── -->
+<div id="recap-modal"
+  style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9100;
+         align-items:flex-end;justify-content:center"
+  onclick="if(event.target===this) closeRecapModal()">
+  <div style="background:var(--surface);border-radius:var(--radius) var(--radius) 0 0;
+              width:100%;max-width:600px;max-height:90vh;overflow-y:auto;
+              box-shadow:0 -4px 32px rgba(0,0,0,.18)">
+    <div style="position:sticky;top:0;background:var(--surface);z-index:1;
+                padding:1.1rem 1.25rem .9rem;border-bottom:1px solid var(--border);
+                display:flex;align-items:center;justify-content:space-between">
+      <div style="font-weight:700;font-size:1rem" id="recap-modal-title">Recap</div>
+      <button onclick="closeRecapModal()"
+        style="background:none;border:none;cursor:pointer;font-size:1.5rem;
+               color:var(--text3);line-height:1;padding:.1rem .3rem">×</button>
+    </div>
+    <div id="recap-modal-body"></div>
+  </div>
+</div>
+
 <!-- Toast globale (usato da showToast in api.js) -->
 <div id="toast"></div>
 
@@ -1572,17 +1596,14 @@ function homeTabSwitch(tab) {
 
 /* ── Aggiungi voce tramite api.js ── */
 async function homeAddEntry(type) {
-  // addEntry() legge i valori dagli ID DOM e li persiste,
-  // poi chiama render() che rende la lista aggiornata.
-  await addEntry(type);
-  // render() è già chiamata internamente, ma forziamo per sicurezza:
-  renderHomeEntries();
+  const ok = await addEntry(type);
+  if (ok !== false) renderHomeView();
 }
 
 /* ── Elimina voce ── */
 async function homeDeleteEntry(type, id) {
-  await deleteEntry(type, id);   // confirm() già in api.js
-  renderHomeEntries();
+  const ok = await deleteEntry(type, id);
+  if (ok !== false) renderHomeView();
 }
 
 /* ── Modal tasse ── */
@@ -1673,10 +1694,10 @@ async function homeConfirmEdit() {
 
   const btn = document.getElementById('btn-save-edit-entry');
   btn.disabled = true;
-  await saveEditEntry(_editType, _editId, amt, desc, taxable);
+  const ok = await saveEditEntry(_editType, _editId, amt, desc, taxable);
   btn.disabled = false;
   closeEditModal();
-  renderHomeEntries();
+  if (ok !== false) renderHomeView();
 }
 
 /* ── Riepilogo mensile ── */
@@ -1741,6 +1762,96 @@ function renderHomeSummary() {
 async function homeChangeMonth(dir) {
   await changeMonth(dir);
   renderHomeView();
+}
+
+/* ── Recap mensile completo ── */
+function openRecapModal() {
+  document.getElementById('recap-modal-title').textContent =
+    `Recap ${MONTHS[currentMonth]} ${currentYear}`;
+
+  const fmt = (n, sign) => `${sign}€${Math.abs(n).toFixed(2)}`;
+
+  const _section = (label, total, color) =>
+    `<div style="display:flex;align-items:center;justify-content:space-between;
+                 padding:.6rem 1.25rem .5rem;background:var(--surface2);
+                 border-bottom:1px solid var(--border)">
+       <span style="font-size:.68rem;font-weight:700;color:var(--text3);
+                    text-transform:uppercase;letter-spacing:.05em">${label}</span>
+       <span style="font-size:.75rem;font-weight:700;color:${color}">${total}</span>
+     </div>`;
+
+  const _row = (date, desc, amtStr, extra) =>
+    `<div style="display:flex;align-items:center;padding:.6rem 1.25rem;
+                 border-bottom:1px solid var(--border);gap:.5rem">
+       <span style="font-size:.8rem;color:var(--text3);min-width:2.5rem;flex-shrink:0">${date}</span>
+       <span style="font-size:.87rem;flex:1;min-width:0;overflow:hidden;
+                    text-overflow:ellipsis;white-space:nowrap">${escHtml(desc)}</span>
+       ${extra || ''}
+       <span style="font-size:.87rem;font-weight:700;flex-shrink:0;margin-left:auto">${amtStr}</span>
+     </div>`;
+
+  const _empty = t =>
+    `<div style="padding:.85rem 1.25rem;font-size:.84rem;color:var(--text3)">${t}</div>`;
+
+  const d2 = s => s ? new Date(s + 'T00:00:00').toLocaleDateString('it-IT',{day:'2-digit',month:'2-digit'}) : '—';
+
+  // ── Entrate ──────────────────────────────────────────────
+  const inc = [...(entrate || [])].sort((a,b) => (a.data||'').localeCompare(b.data||''));
+  const totInc = inc.reduce((s,e) => s + parseFloat(e.importo||0), 0);
+  let html = _section('Entrate', fmt(totInc,'+'), 'var(--green)');
+  html += inc.length
+    ? inc.map(e => {
+        const tag = e.tassata
+          ? `<span style="font-size:.6rem;background:var(--amber-light);color:var(--amber);
+                          border-radius:3px;padding:.1rem .35rem;flex-shrink:0">tax</span>`
+          : '';
+        return _row(d2(e.data), e.descrizione || '—', `<span style="color:var(--green)">${fmt(e.importo,'+')}</span>`, tag);
+      }).join('')
+    : _empty('Nessuna entrata questo mese');
+
+  // ── Uscite variabili ─────────────────────────────────────
+  const exp = [...(uscite || [])].sort((a,b) => (a.data||'').localeCompare(b.data||''));
+  const totExp = exp.reduce((s,e) => s + parseFloat(e.importo||0), 0);
+  html += _section('Uscite variabili', fmt(totExp,'−'), 'var(--red)');
+  html += exp.length
+    ? exp.map(e => _row(d2(e.data), e.descrizione || '—',
+        `<span style="color:var(--red)">${fmt(e.importo,'−')}</span>`)).join('')
+    : _empty('Nessuna uscita questo mese');
+
+  // ── Spese ricorrenti ──────────────────────────────────────
+  const ric = getRicorrentiAttive();
+  const totRic = ric.reduce((s,r) => s + parseFloat(r.importo||0), 0);
+  html += _section('Spese ricorrenti', fmt(totRic,'−'), 'var(--red)');
+  html += ric.length
+    ? ric.map(r => _row(`gg.${r.giorno||'—'}`, r.descrizione || '—',
+        `<span style="color:var(--red)">${fmt(r.importo,'−')}</span>`)).join('')
+    : _empty('Nessuna spesa ricorrente attiva');
+
+  // ── Totale netto ──────────────────────────────────────────
+  const lordo    = totInc;
+  const studioQ  = lordo * (STUDIO_PCT || 0);
+  const tassabili = inc.filter(e => e.tassata).reduce((s,e) => s + parseFloat(e.importo||0), 0);
+  const tasse    = tassabili * (TAX_PCT || 0);
+  const speseTot = totExp + totRic;
+  const netto    = lordo - studioQ - tasse - speseTot;
+  const nettoStr = netto >= 0 ? `+€${netto.toFixed(2)}` : `−€${Math.abs(netto).toFixed(2)}`;
+
+  html += `<div style="display:flex;align-items:center;justify-content:space-between;
+                       padding:1rem 1.25rem;margin-top:.25rem;
+                       border-top:2px solid var(--border)">
+             <span style="font-size:.92rem;font-weight:700">Netto in tasca</span>
+             <span style="font-size:1.15rem;font-weight:800;
+                          color:${netto >= 0 ? 'var(--green)' : 'var(--red)'}">
+               ${nettoStr}
+             </span>
+           </div>`;
+
+  document.getElementById('recap-modal-body').innerHTML = html;
+  document.getElementById('recap-modal').style.display = 'flex';
+}
+
+function closeRecapModal() {
+  document.getElementById('recap-modal').style.display = 'none';
 }
 
 /* ═══════════════════════════════════════════════════════
