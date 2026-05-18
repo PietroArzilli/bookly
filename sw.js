@@ -1,13 +1,11 @@
-// InkBooks Service Worker — cache-first per assets statici
-const CACHE = 'inkbooks-v2';
+// InkBooks Service Worker
+const CACHE = 'inkbooks-v3';
 
 const PRECACHE = [
-  '/inkbooks/',
-  '/inkbooks/index.html',
   'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2',
 ];
 
-// Installa: metti in cache gli asset statici
+// Installa: pre-cache solo il CDN pesante (non l'HTML)
 self.addEventListener('install', e => {
   e.waitUntil(
     caches.open(CACHE)
@@ -27,32 +25,42 @@ self.addEventListener('activate', e => {
   );
 });
 
-// Fetch: cache-first per static, network-only per Supabase API
+// Fetch: network-first per HTML, cache-first per tutto il resto
 self.addEventListener('fetch', e => {
   const url = new URL(e.request.url);
 
-  // Supabase API calls → sempre rete (dati in tempo reale)
+  // Supabase API → sempre rete
   if (url.hostname.endsWith('supabase.co') ||
       url.hostname.endsWith('supabase.com') ||
       url.hostname.endsWith('supabase.io')) {
     return;
   }
 
+  // HTML → network-first: aggiornamenti arrivano subito
+  if (e.request.headers.get('accept')?.includes('text/html')) {
+    e.respondWith(
+      fetch(e.request)
+        .then(response => {
+          const clone = response.clone();
+          caches.open(CACHE).then(c => c.put(e.request, clone));
+          return response;
+        })
+        .catch(() => caches.match(e.request))
+    );
+    return;
+  }
+
+  // Tutto il resto (CDN, immagini, ecc.) → cache-first
   e.respondWith(
     caches.match(e.request).then(cached => {
       if (cached) return cached;
-
       return fetch(e.request).then(response => {
-        // Metti in cache solo risposte GET valide
         if (response && response.ok && e.request.method === 'GET') {
           const clone = response.clone();
           caches.open(CACHE).then(c => c.put(e.request, clone));
         }
         return response;
-      }).catch(() => {
-        // Offline fallback: restituisce la cache se disponibile
-        return cached || new Response('Offline', { status: 503 });
-      });
+      }).catch(() => new Response('Offline', { status: 503 }));
     })
   );
 });
