@@ -343,6 +343,27 @@ body {
 }
 .field-input:focus { border-color: var(--accent); background: var(--surface); }
 
+/* Date wheel — tre select affiancati */
+.date-wheel-row { display: flex; gap: .4rem; }
+.date-sel {
+  flex: 1;
+  background: var(--surface2);
+  border: 1.5px solid transparent;
+  border-radius: var(--radius-sm);
+  padding: .75rem .3rem;
+  font-size: 16px;
+  font-family: inherit;
+  color: var(--text);
+  outline: none;
+  appearance: none;
+  -webkit-appearance: none;
+  text-align: center;
+  cursor: pointer;
+  transition: border-color .15s;
+}
+.date-sel:focus { border-color: var(--accent); background: var(--surface); }
+.date-sel.month { flex: 2; }
+
 /* Pulsanti */
 .btn {
   display: block; width: 100%;
@@ -1074,8 +1095,11 @@ body {
     <div id="add-form-apt">
       <div class="field">
         <label class="field-label">Data</label>
-        <input type="text" id="add-apt-date" class="field-input"
-          placeholder="GG/MM/AAAA" maxlength="10" inputmode="numeric" autocomplete="off">
+        <div class="date-wheel-row">
+          <select id="add-apt-day" class="date-sel"></select>
+          <select id="add-apt-month" class="date-sel month"></select>
+          <select id="add-apt-year" class="date-sel"></select>
+        </div>
       </div>
       <div class="field">
         <label class="field-label">Ora <span style="font-weight:400;color:var(--text3)">(opzionale)</span></label>
@@ -1107,8 +1131,11 @@ body {
     <div id="add-form-rem" style="display:none">
       <div class="field">
         <label class="field-label">Data</label>
-        <input type="text" id="add-rem-date" class="field-input"
-          placeholder="GG/MM/AAAA" maxlength="10" inputmode="numeric" autocomplete="off">
+        <div class="date-wheel-row">
+          <select id="add-rem-day" class="date-sel"></select>
+          <select id="add-rem-month" class="date-sel month"></select>
+          <select id="add-rem-year" class="date-sel"></select>
+        </div>
       </div>
       <div class="field">
         <label class="field-label">Testo del promemoria</label>
@@ -1180,8 +1207,11 @@ body {
     <div style="font-weight:700;font-size:1rem;margin-bottom:1.25rem">Modifica appuntamento</div>
     <div class="field">
       <label class="field-label">Data</label>
-      <input type="text" id="edit-apt-date" class="field-input"
-        placeholder="GG/MM/AAAA" maxlength="10" inputmode="numeric" autocomplete="off">
+      <div class="date-wheel-row">
+        <select id="edit-apt-day" class="date-sel"></select>
+        <select id="edit-apt-month" class="date-sel month"></select>
+        <select id="edit-apt-year" class="date-sel"></select>
+      </div>
     </div>
     <div class="field">
       <label class="field-label">Ora <span style="font-weight:400;color:var(--text3)">(opzionale)</span></label>
@@ -1961,6 +1991,49 @@ async function changeMonth(dir) {
 // =====================================================
 // UTILITY PER INPUT DATA
 // =====================================================
+
+/* ── Wheel date selects ── */
+const _MONTHS_WHEEL = ['Gennaio','Febbraio','Marzo','Aprile','Maggio','Giugno',
+                       'Luglio','Agosto','Settembre','Ottobre','Novembre','Dicembre'];
+
+function _initWheels(prefix) {
+  const dayEl = document.getElementById(`${prefix}-day`);
+  const monEl = document.getElementById(`${prefix}-month`);
+  const yrEl  = document.getElementById(`${prefix}-year`);
+  if (!dayEl || !monEl || !yrEl) return;
+
+  if (dayEl.options.length === 0) {
+    for (let i = 1; i <= 31; i++)
+      dayEl.add(new Option(String(i).padStart(2,'0'), i));
+  }
+  if (monEl.options.length === 0) {
+    _MONTHS_WHEEL.forEach((m, i) => monEl.add(new Option(m, i + 1)));
+  }
+  if (yrEl.options.length === 0) {
+    const y = new Date().getFullYear();
+    for (let i = y - 1; i <= y + 3; i++) yrEl.add(new Option(i, i));
+  }
+}
+
+function _setWheels(prefix, isoDate) {
+  const [y, m, d] = (isoDate || '').split('-').map(Number);
+  if (!y) return;
+  const dayEl = document.getElementById(`${prefix}-day`);
+  const monEl = document.getElementById(`${prefix}-month`);
+  const yrEl  = document.getElementById(`${prefix}-year`);
+  if (dayEl) dayEl.value = d;
+  if (monEl) monEl.value = m;
+  if (yrEl)  yrEl.value  = y;
+}
+
+function _getIsoFromWheels(prefix) {
+  const d = document.getElementById(`${prefix}-day`)?.value;
+  const m = document.getElementById(`${prefix}-month`)?.value;
+  const y = document.getElementById(`${prefix}-year`)?.value;
+  if (!d || !m || !y) return null;
+  return `${y}-${String(m).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+}
+
 function initDateInput(id) {
   const el = document.getElementById(id);
   if (!el) return;
@@ -2868,7 +2941,7 @@ function openEditAptModal(id) {
   // Data
   const dt     = a.data_ora ? new Date(a.data_ora) : null;
   const isoStr = dt ? dt.toLocaleDateString('sv', { timeZone: 'Europe/Rome' }) : '';
-  document.getElementById('edit-apt-date').value   = fmtItDate(isoStr);
+  _setWheels('edit-apt', isoStr || dayStr(selectedDay));
 
   // Ora (solo se non mezzanotte UTC)
   const midnight = dt && dt.getUTCHours() === 0 && dt.getUTCMinutes() === 0;
@@ -2893,9 +2966,8 @@ function closeEditAptModal() {
 async function submitEditApt() {
   if (!_editingAptId) return;
 
-  const dateStr = document.getElementById('edit-apt-date').value.trim();
-  const dateIso = parseItDate(dateStr);
-  if (!dateIso) { showToast('Data non valida — usa GG/MM/AAAA'); return; }
+  const dateIso = _getIsoFromWheels('edit-apt');
+  if (!dateIso) { showToast('Seleziona una data'); return; }
 
   const client = document.getElementById('edit-apt-client').value.trim();
   if (!client)  { showToast('Inserisci il nome del cliente'); return; }
@@ -2918,10 +2990,12 @@ async function submitEditApt() {
   renderCalendarSection();
 }
 
-/* ── Inizializza input date modali appuntamenti (una tantum) ── */
+/* ── Inizializza wheel date (una tantum) ── */
 window.addEventListener('DOMContentLoaded', () => {
-  initDateInput('new-apt-date');
-  initDateInput('edit-apt-date');
+  ['add-apt','add-rem','edit-apt'].forEach(p => {
+    _initWheels(p);
+    _setWheels(p, dayStr(selectedDay));
+  });
 });
 
 /* ═══════════════════════════════════════════════════════
@@ -2980,11 +3054,8 @@ function editReminder(id, newText) {
 function openAddModal(tab) {
   // Precompila con il giorno selezionato
   const ds = dayStr(selectedDay);
-  const fmtd = fmtItDate(ds);
-  const aptDate = document.getElementById('add-apt-date');
-  const remDate = document.getElementById('add-rem-date');
-  if (aptDate && !aptDate.value) aptDate.value = fmtd;
-  if (remDate && !remDate.value) remDate.value = fmtd;
+  _setWheels('add-apt', ds);
+  _setWheels('add-rem', ds);
 
   addModalTab(tab || 'appointment');
   document.getElementById('add-event-modal').style.display = 'flex';
@@ -3004,9 +3075,8 @@ function addModalTab(tab) {
 
 /* ── Aggiungi appuntamento dal calendario ── */
 async function calAddAppuntamento() {
-  const dateStr = document.getElementById('add-apt-date').value.trim();
-  const dateIso = parseItDate(dateStr);
-  if (!dateIso) { showToast('Data non valida — usa GG/MM/AAAA'); return; }
+  const dateIso = _getIsoFromWheels('add-apt');
+  if (!dateIso) { showToast('Seleziona una data'); return; }
 
   const client = document.getElementById('add-apt-client').value.trim();
   if (!client) { showToast('Inserisci il nome del cliente'); return; }
@@ -3037,16 +3107,15 @@ async function calAddAppuntamento() {
 
 /* ── Aggiungi reminder dal calendario ── */
 function calAddReminder() {
-  const dateStr = document.getElementById('add-rem-date').value.trim();
-  const dateIso = parseItDate(dateStr);
-  if (!dateIso) { showToast('Data non valida — usa GG/MM/AAAA'); return; }
+  const dateIso = _getIsoFromWheels('add-rem');
+  if (!dateIso) { showToast('Seleziona una data'); return; }
 
   const text = document.getElementById('add-rem-text').value.trim();
   if (!text) { showToast('Inserisci il testo del promemoria'); return; }
 
   addReminder(dateIso, text);
   document.getElementById('add-rem-text').value = '';
-  document.getElementById('add-rem-date').value = '';
+  _setWheels('add-rem', dayStr(selectedDay));
 
   closeAddModal();
   showToast('Promemoria aggiunto 📌');
@@ -3106,11 +3175,6 @@ function calSaveReminderEdit(id, newText) {
   renderDayEvents(selectedDay);
 }
 
-/* ── Inizializza input date nel modal (una tantum) ── */
-window.addEventListener('DOMContentLoaded', () => {
-  initDateInput('add-apt-date');
-  initDateInput('add-rem-date');
-});
 
 /* ── Utility: escape HTML ── */
 function escHtml(str) {
