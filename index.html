@@ -928,38 +928,6 @@ body {
       <button class="fab-btn" id="cal-fab" style="display:none"
         onclick="openAddModal('appointment')" title="Aggiungi">＋</button>
 
-      <!-- 📋 APPUNTAMENTI -->
-      <div id="section-appointments" class="section">
-
-        <!-- Navigazione mese (sticky) -->
-        <div class="cal-topbar">
-          <button class="cal-nav-btn" onclick="aptsChangeMonth(-1)">‹</button>
-          <div class="cal-month-label" id="apts-month-label">—</div>
-          <button class="cal-nav-btn" onclick="aptsChangeMonth(1)">›</button>
-        </div>
-
-        <!-- Riepilogo veloce -->
-        <div class="apts-summary">
-          <div class="apts-summary-item">
-            <div class="apts-summary-label">Previsto (confermati)</div>
-            <div class="apts-summary-val green" id="apts-total">€0,00</div>
-          </div>
-          <div class="apts-summary-item" style="text-align:right">
-            <div class="apts-summary-label">Tot. appuntamenti</div>
-            <div class="apts-summary-val" id="apts-count">0</div>
-          </div>
-        </div>
-
-        <!-- Lista card -->
-        <div id="apts-list" style="background:var(--surface);margin-bottom:.5rem">
-          <div class="apts-empty">Caricamento…</div>
-        </div>
-
-      </div><!-- /section-appointments -->
-
-      <!-- FAB appuntamenti (separato dal FAB calendario) -->
-      <button class="fab-btn" id="apts-fab" style="display:none"
-        onclick="openNewAptModal()" title="Nuovo appuntamento">＋</button>
 
       <!-- 👤 PROFILO -->
       <div id="section-profile" class="section">
@@ -1038,11 +1006,7 @@ body {
         <span class="nav-emoji">🏠</span>
         Home
       </button>
-      <button class="nav-item" onclick="switchSection('appointments')" id="nav-appointments">
-        <span class="nav-emoji">📋</span>
-        Appuntamenti
-      </button>
-      <button class="nav-item" onclick="switchSection('profile')" id="nav-profile">
+<button class="nav-item" onclick="switchSection('profile')" id="nav-profile">
         <span class="nav-emoji">👤</span>
         Profilo
       </button>
@@ -2046,14 +2010,12 @@ function switchSection(name) {
   if (container) container.scrollTop = 0;
 
   // FAB: un FAB per sezione, uno solo visibile
-  document.getElementById('cal-fab').style.display  = name === 'calendar'      ? 'flex' : 'none';
-  document.getElementById('apts-fab').style.display = name === 'appointments'  ? 'flex' : 'none';
+  document.getElementById('cal-fab').style.display = name === 'calendar' ? 'flex' : 'none';
 
   // Aggiorna la sezione appena resa visibile
-  if (name === 'home')          renderHomeView();
-  if (name === 'calendar')      renderCalendarSection();
-  if (name === 'appointments')  renderApptsSection();
-  if (name === 'profile')       renderProfileSection();
+  if (name === 'home')     renderHomeView();
+  if (name === 'calendar') renderCalendarSection();
+  if (name === 'profile')  renderProfileSection();
 }
 
 /* ─────────────────────────────────────────────
@@ -2093,8 +2055,7 @@ function render() {
   // Aggiorna anche calendario e appuntamenti se sono le sezioni attive
   if (document.getElementById('section-calendar')?.classList.contains('active'))
     renderCalendarSection();
-  if (document.getElementById('section-appointments')?.classList.contains('active'))
-    renderApptsSection();
+
   if (document.getElementById('section-profile')?.classList.contains('active'))
     renderProfRicorrenti();
 }
