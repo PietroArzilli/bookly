@@ -1084,9 +1084,13 @@ body {
               box-shadow:0 -4px 24px rgba(0,0,0,.15);max-height:88vh;overflow-y:auto">
 
     <!-- Segmented control tab -->
-    <div class="modal-seg">
+    <div class="modal-seg" style="flex-wrap:wrap">
       <button class="modal-seg-btn active" id="add-tab-apt"
-        onclick="addModalTab('appointment')">📅 Appuntamento</button>
+        onclick="addModalTab('appointment')">📅 Appunt.</button>
+      <button class="modal-seg-btn" id="add-tab-inc"
+        onclick="addModalTab('income')">✅ Entrata</button>
+      <button class="modal-seg-btn" id="add-tab-exp"
+        onclick="addModalTab('expense')">🔴 Uscita</button>
       <button class="modal-seg-btn" id="add-tab-rem"
         onclick="addModalTab('reminder')">📌 Reminder</button>
     </div>
@@ -1146,6 +1150,67 @@ body {
       <div style="display:flex;gap:.75rem;margin-top:1rem">
         <button class="btn btn-primary" style="flex:1"
           onclick="calAddReminder()">Aggiungi</button>
+        <button class="btn btn-ghost" style="flex:1"
+          onclick="closeAddModal()">Annulla</button>
+      </div>
+    </div>
+
+    <!-- ── FORM ENTRATA ── -->
+    <div id="add-form-inc" style="display:none">
+      <div class="field">
+        <label class="field-label">Data</label>
+        <div class="date-wheel-row">
+          <select id="add-inc-day" class="date-sel"></select>
+          <select id="add-inc-month" class="date-sel month"></select>
+          <select id="add-inc-year" class="date-sel"></select>
+        </div>
+      </div>
+      <div class="field">
+        <label class="field-label">Importo (€)</label>
+        <input type="number" id="add-inc-amount" class="field-input"
+          placeholder="0,00" step="0.01" min="0" inputmode="decimal">
+      </div>
+      <div class="field">
+        <label class="field-label">Descrizione <span style="font-weight:400;color:var(--text3)">(opzionale)</span></label>
+        <input type="text" id="add-inc-desc" class="field-input" placeholder="es. Tatuaggio manica">
+      </div>
+      <div class="field">
+        <label style="display:flex;align-items:center;gap:.6rem;cursor:pointer;font-size:.88rem;user-select:none">
+          <input type="checkbox" id="add-inc-taxable" checked
+            style="width:16px;height:16px;accent-color:var(--accent);cursor:pointer">
+          Applica tasse
+        </label>
+      </div>
+      <div style="display:flex;gap:.75rem;margin-top:1rem">
+        <button id="btn-add-inc-cal" class="btn btn-primary" style="flex:1"
+          onclick="calAddIncome()">Aggiungi</button>
+        <button class="btn btn-ghost" style="flex:1"
+          onclick="closeAddModal()">Annulla</button>
+      </div>
+    </div>
+
+    <!-- ── FORM USCITA ── -->
+    <div id="add-form-exp" style="display:none">
+      <div class="field">
+        <label class="field-label">Data</label>
+        <div class="date-wheel-row">
+          <select id="add-exp-day" class="date-sel"></select>
+          <select id="add-exp-month" class="date-sel month"></select>
+          <select id="add-exp-year" class="date-sel"></select>
+        </div>
+      </div>
+      <div class="field">
+        <label class="field-label">Importo (€)</label>
+        <input type="number" id="add-exp-amount" class="field-input"
+          placeholder="0,00" step="0.01" min="0" inputmode="decimal">
+      </div>
+      <div class="field">
+        <label class="field-label">Descrizione <span style="font-weight:400;color:var(--text3)">(opzionale)</span></label>
+        <input type="text" id="add-exp-desc" class="field-input" placeholder="es. Aghi, inchiostro">
+      </div>
+      <div style="display:flex;gap:.75rem;margin-top:1rem">
+        <button id="btn-add-exp-cal" class="btn btn-primary" style="flex:1"
+          onclick="calAddExpense()">Aggiungi</button>
         <button class="btn btn-ghost" style="flex:1"
           onclick="closeAddModal()">Annulla</button>
       </div>
@@ -2992,7 +3057,7 @@ async function submitEditApt() {
 
 /* ── Inizializza wheel date (una tantum) ── */
 window.addEventListener('DOMContentLoaded', () => {
-  ['add-apt','add-rem','edit-apt'].forEach(p => {
+  ['add-apt','add-rem','add-inc','add-exp','edit-apt'].forEach(p => {
     _initWheels(p);
     _setWheels(p, dayStr(selectedDay));
   });
@@ -3054,8 +3119,7 @@ function editReminder(id, newText) {
 function openAddModal(tab) {
   // Precompila con il giorno selezionato
   const ds = dayStr(selectedDay);
-  _setWheels('add-apt', ds);
-  _setWheels('add-rem', ds);
+  ['add-apt','add-rem','add-inc','add-exp'].forEach(p => _setWheels(p, ds));
 
   addModalTab(tab || 'appointment');
   document.getElementById('add-event-modal').style.display = 'flex';
@@ -3066,11 +3130,13 @@ function closeAddModal() {
 }
 
 function addModalTab(tab) {
-  const isApt = tab === 'appointment';
-  document.getElementById('add-form-apt').style.display = isApt ? 'block' : 'none';
-  document.getElementById('add-form-rem').style.display = isApt ? 'none'  : 'block';
-  document.getElementById('add-tab-apt').classList.toggle('active',  isApt);
-  document.getElementById('add-tab-rem').classList.toggle('active', !isApt);
+  const tabs  = ['appointment','income','expense','reminder'];
+  const forms = { appointment:'add-form-apt', income:'add-form-inc', expense:'add-form-exp', reminder:'add-form-rem' };
+  const btns  = { appointment:'add-tab-apt',  income:'add-tab-inc',  expense:'add-tab-exp',  reminder:'add-tab-rem' };
+  tabs.forEach(t => {
+    document.getElementById(forms[t]).style.display = t === tab ? 'block' : 'none';
+    document.getElementById(btns[t]).classList.toggle('active', t === tab);
+  });
 }
 
 /* ── Aggiungi appuntamento dal calendario ── */
@@ -3120,6 +3186,63 @@ function calAddReminder() {
   closeAddModal();
   showToast('Promemoria aggiunto 📌');
   renderCalendarSection();
+}
+
+/* ── Aggiungi entrata dal calendario ── */
+async function calAddIncome() {
+  const dateIso = _getIsoFromWheels('add-inc');
+  if (!dateIso) { showToast('Seleziona una data'); return; }
+  const val = parseFloat(document.getElementById('add-inc-amount').value);
+  if (!val || val <= 0) { showToast('Inserisci un importo valido'); return; }
+  const desc    = document.getElementById('add-inc-desc').value.trim();
+  const taxable = document.getElementById('add-inc-taxable').checked;
+  const btn = document.getElementById('btn-add-inc-cal');
+  btn.disabled = true;
+  const { data, error } = await sb.from('entrate').insert({
+    user_id: currentUser.id, importo: val, descrizione: desc, data: dateIso, tassata: taxable
+  }).select().single();
+  btn.disabled = false;
+  if (!error && data) {
+    const { start, end } = monthRange();
+    if (dateIso >= start && dateIso <= end) entrate.push(data);
+    _saveCache();
+    document.getElementById('add-inc-amount').value = '';
+    document.getElementById('add-inc-desc').value = '';
+    closeAddModal();
+    showToast('Entrata aggiunta ✓');
+    renderHomeView();
+    renderCalendarSection();
+  } else {
+    showToast('Errore: ' + (error?.message || 'Riprovare'));
+  }
+}
+
+/* ── Aggiungi uscita dal calendario ── */
+async function calAddExpense() {
+  const dateIso = _getIsoFromWheels('add-exp');
+  if (!dateIso) { showToast('Seleziona una data'); return; }
+  const val = parseFloat(document.getElementById('add-exp-amount').value);
+  if (!val || val <= 0) { showToast('Inserisci un importo valido'); return; }
+  const desc = document.getElementById('add-exp-desc').value.trim();
+  const btn = document.getElementById('btn-add-exp-cal');
+  btn.disabled = true;
+  const { data, error } = await sb.from('uscite').insert({
+    user_id: currentUser.id, importo: val, descrizione: desc, data: dateIso
+  }).select().single();
+  btn.disabled = false;
+  if (!error && data) {
+    const { start, end } = monthRange();
+    if (dateIso >= start && dateIso <= end) uscite.push(data);
+    _saveCache();
+    document.getElementById('add-exp-amount').value = '';
+    document.getElementById('add-exp-desc').value = '';
+    closeAddModal();
+    showToast('Uscita aggiunta ✓');
+    renderHomeView();
+    renderCalendarSection();
+  } else {
+    showToast('Errore: ' + (error?.message || 'Riprovare'));
+  }
 }
 
 /* ── Azioni rapide sugli eventi ── */
