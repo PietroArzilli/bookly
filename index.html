@@ -2633,6 +2633,7 @@ function renderDayEvents(d) {
       <div class="day-event-actions">
         ${a.stato !== 'cancellato'
           ? `<button class="entry-btn" title="Riporta entrata" onclick="calRiporta('${a.id}')">✓✓</button>` : ''}
+        <button class="entry-btn" title="Modifica" onclick="openEditAptModal('${a.id}')">✎</button>
         <button class="entry-btn del" title="Elimina" onclick="calDeleteApt('${a.id}')">✕</button>
       </div>
     </div>`;
@@ -2677,7 +2678,7 @@ function renderDayEvents(d) {
 
   // ⑤ Reminder
   rems.forEach(r => {
-    html += `<div class="day-event-item">
+    html += `<div class="day-event-item" data-rem-id="${r.id}">
       <button class="reminder-check-btn ${r.completed ? 'done' : ''}"
         onclick="calToggleReminder('${r.id}')">${r.completed ? '✓' : ''}</button>
       <div class="day-event-info">
@@ -2688,6 +2689,8 @@ function renderDayEvents(d) {
         <div class="day-event-sub">Promemoria</div>
       </div>
       <div class="day-event-actions">
+        <button class="entry-btn" title="Modifica"
+          onclick="calEditReminder('${r.id}')">✎</button>
         <button class="entry-btn del" title="Elimina"
           onclick="calDeleteReminder('${r.id}')">✕</button>
       </div>
@@ -2963,6 +2966,13 @@ function toggleReminder(id) {
   if (r) { r.completed = !r.completed; _remSave(all); }
 }
 
+/** Modifica il testo di un reminder. */
+function editReminder(id, newText) {
+  const all = _remAll();
+  const r   = all.find(x => x.id === id);
+  if (r) { r.text = newText; _remSave(all); }
+}
+
 /* ═══════════════════════════════════════════════════════
    MODAL AGGIUNGI EVENTO
    ═══════════════════════════════════════════════════════ */
@@ -3075,6 +3085,24 @@ function calToggleReminder(id) {
 function calDeleteReminder(id) {
   deleteReminder(id);
   renderCalGrid();
+  renderDayEvents(selectedDay);
+}
+
+function calEditReminder(id) {
+  const item = document.querySelector(`[data-rem-id="${id}"] .day-event-title`);
+  if (!item) return;
+  const current = item.textContent.trim();
+  item.innerHTML = `<input type="text" value="${escHtml(current)}"
+    style="width:100%;background:var(--surface2);border:1px solid var(--accent);
+           border-radius:6px;padding:2px 6px;font-size:.85rem;color:var(--text)"
+    onblur="calSaveReminderEdit('${id}',this.value)"
+    onkeydown="if(event.key==='Enter')this.blur();if(event.key==='Escape')renderDayEvents(selectedDay)">`;
+  item.querySelector('input').focus();
+}
+
+function calSaveReminderEdit(id, newText) {
+  const t = newText.trim();
+  if (t) editReminder(id, t);
   renderDayEvents(selectedDay);
 }
 
