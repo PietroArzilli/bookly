@@ -3790,19 +3790,10 @@ window.addEventListener('DOMContentLoaded', async () => {
     history.replaceState({}, '', window.location.pathname);
   }
 
-  // Service Worker (PWA) — auto-reload quando arriva una versione nuova
+  // Deregistra qualsiasi SW vecchio ancora attivo
   if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('/inkbooks/sw.js', { scope: '/inkbooks/' })
-      .then(reg => {
-        reg.update(); // forza controllo aggiornamento ad ogni apertura
-        reg.addEventListener('updatefound', () => {
-          const newSW = reg.installing;
-          newSW.addEventListener('statechange', () => {
-            if (newSW.state === 'activated') window.location.reload();
-          });
-        });
-      })
-      .catch(e => console.warn('SW registration failed:', e));
+    navigator.serviceWorker.getRegistrations()
+      .then(regs => regs.forEach(r => r.unregister()));
   }
 });
 </script>
