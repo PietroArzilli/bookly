@@ -14,7 +14,7 @@ self.addEventListener('install', e => {
   );
 });
 
-// Attiva: elimina cache vecchie
+// Attiva: elimina cache vecchie e forza reload di tutte le tab aperte
 self.addEventListener('activate', e => {
   e.waitUntil(
     caches.keys()
@@ -22,6 +22,8 @@ self.addEventListener('activate', e => {
         keys.filter(k => k !== CACHE).map(k => caches.delete(k))
       ))
       .then(() => self.clients.claim())
+      .then(() => self.clients.matchAll({ type: 'window' }))
+      .then(clients => clients.forEach(c => c.navigate(c.url)))
   );
 });
 
