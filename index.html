@@ -936,6 +936,14 @@ body {
         <!-- Griglia giorni (popolata da renderCalGrid) -->
         <div class="cal-grid" id="cal-grid"></div>
 
+        <!-- Legenda pallini -->
+        <div style="display:flex;gap:1rem;justify-content:center;padding:.35rem 1rem .5rem;flex-wrap:wrap">
+          <span style="display:flex;align-items:center;gap:.3rem;font-size:.68rem;color:var(--text3)"><span class="cal-tiny-dot apt"></span>Appuntamento</span>
+          <span style="display:flex;align-items:center;gap:.3rem;font-size:.68rem;color:var(--text3)"><span class="cal-tiny-dot income"></span>Entrata</span>
+          <span style="display:flex;align-items:center;gap:.3rem;font-size:.68rem;color:var(--text3)"><span class="cal-tiny-dot expense"></span>Uscita</span>
+          <span style="display:flex;align-items:center;gap:.3rem;font-size:.68rem;color:var(--text3)"><span class="cal-tiny-dot reminder"></span>Reminder</span>
+        </div>
+
         <!-- Lista eventi giorno selezionato -->
         <div class="section-inner" style="padding-top:.75rem">
           <div class="card" id="cal-day-events">
