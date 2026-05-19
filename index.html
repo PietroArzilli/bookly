@@ -3118,12 +3118,26 @@ function editReminder(id, newText) {
    ═══════════════════════════════════════════════════════ */
 
 function openAddModal(tab) {
-  // Precompila con il giorno selezionato
   const ds = dayStr(selectedDay);
   ['add-apt','add-rem','add-inc','add-exp'].forEach(p => _setWheels(p, ds));
 
-  addModalTab(tab || 'appointment');
+  // Mostra il form appuntamento per misurarne l'altezza, poi switcha al tab richiesto
+  const aptForm = document.getElementById('add-form-apt');
+  ['add-form-rem','add-form-inc','add-form-exp'].forEach(id => {
+    const el = document.getElementById(id);
+    el.style.display = 'none';
+    el.style.minHeight = '';
+  });
+  aptForm.style.display = 'block';
   document.getElementById('add-event-modal').style.display = 'flex';
+
+  requestAnimationFrame(() => {
+    const h = aptForm.offsetHeight;
+    ['add-form-apt','add-form-rem','add-form-inc','add-form-exp'].forEach(id => {
+      document.getElementById(id).style.minHeight = h + 'px';
+    });
+    addModalTab(tab || 'appointment');
+  });
 }
 
 function closeAddModal() {
