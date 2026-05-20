@@ -2268,12 +2268,16 @@ async function homeDeleteEntry(type, id) {
 let _taxCallback = null;
 
 function _showTaxModal(id, callback) {
-  _taxCallback = callback;
   const apt = (appuntamenti || []).find(a => String(a.id) === String(id));
   const amt = parseFloat(apt?.importo_previsto || 0);
-  const amtEl = document.getElementById('tax-modal-amount');
-  if (amtEl) amtEl.textContent = amt > 0 ? `Importo: €${amt.toFixed(2)}` : '';
   const pct = userProfile?.aliquota_tasse || 0;
+
+  // Se non c'è un importo previsto, salta il modal
+  if (amt <= 0) { callback(pct > 0); return; }
+
+  _taxCallback = callback;
+  const amtEl = document.getElementById('tax-modal-amount');
+  if (amtEl) amtEl.textContent = `Importo: €${amt.toFixed(2)}`;
   const lbl = document.getElementById('tax-modal-label');
   if (lbl) lbl.textContent = pct > 0 ? `Applica tasse (${pct}%)` : 'Applica tasse';
   document.getElementById('tax-modal-check').checked = pct > 0;
