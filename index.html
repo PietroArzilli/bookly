@@ -835,12 +835,9 @@ body {
             <div class="apt-today-empty">Caricamento…</div>
           </div>
 
-          <!-- ③ VOCI DI OGGI -->
-          <div class="sec-label" style="margin-top:.25rem">
-            <span>Voci di oggi</span>
-            <span id="home-day-label" style="font-weight:400;color:var(--text3)"></span>
-          </div>
-          <div class="card" id="home-entries-list">
+          <!-- ③ PROMEMORIA DI OGGI -->
+          <div class="sec-label" style="margin-top:.25rem">Promemoria oggi</div>
+          <div class="card" id="home-reminders-list">
             <div class="entries-empty">Caricamento…</div>
           </div>
 
@@ -1073,6 +1070,18 @@ body {
         <label class="field-label">Note</label>
         <input type="text" id="add-apt-notes" class="field-input"
           placeholder="es. Manica destra, old school">
+      </div>
+      <div class="field">
+        <label style="display:flex;align-items:center;gap:.6rem;cursor:pointer;font-size:.88rem;user-select:none">
+          <input type="checkbox" id="add-apt-reminder-chk"
+            style="width:16px;height:16px;accent-color:var(--accent);cursor:pointer"
+            onchange="document.getElementById('add-apt-reminder-wrap').style.display=this.checked?'block':'none'">
+          Aggiungi promemoria
+        </label>
+        <div id="add-apt-reminder-wrap" style="display:none;margin-top:.5rem">
+          <input type="text" id="add-apt-reminder-text" class="field-input"
+            placeholder="es. Prepara l'inchiostro">
+        </div>
       </div>
       <div style="display:flex;gap:.75rem;margin-top:1rem">
         <button id="btn-add-apt-cal" class="btn btn-primary" style="flex:1"
@@ -2074,7 +2083,7 @@ function render() {
 function renderHomeView() {
   renderHomeDateHeader();
   renderHomeApt();
-  renderHomeEntries();
+  renderHomeReminders();
   renderHomeSummary();
 }
 
@@ -2140,6 +2149,45 @@ function renderHomeApt() {
       <button class="btn btn-sm" style="margin-top:.85rem;background:var(--green-light);color:var(--green);font-size:.8rem"
         onclick="homeRiporta('${a.id}')">✓✓ Riporta come entrata</button>
     </div>`;
+}
+
+/** Promemoria di oggi nella home. */
+function renderHomeReminders() {
+  const container = document.getElementById('home-reminders-list');
+  if (!container) return;
+  const now = new Date();
+  const todayIso = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
+  const rems = getReminders(todayIso);
+
+  if (!rems.length) {
+    container.innerHTML = '<div class="entries-empty">Nessun promemoria per oggi</div>';
+    return;
+  }
+
+  container.innerHTML = rems.map(r => `
+    <div class="entry-row" style="${r.completed ? 'opacity:.45' : ''}">
+      <input type="checkbox" ${r.completed ? 'checked' : ''}
+        style="width:17px;height:17px;accent-color:var(--accent);cursor:pointer;flex-shrink:0"
+        onchange="homeToggleReminder('${r.id}')">
+      <div class="entry-info">
+        <div class="entry-desc" style="${r.completed ? 'text-decoration:line-through' : ''}">${escHtml(r.text)}</div>
+      </div>
+      <div class="entry-actions">
+        <button class="entry-btn del" onclick="homeDeleteReminder('${r.id}')">✕</button>
+      </div>
+    </div>`).join('');
+}
+
+function homeToggleReminder(id) {
+  toggleReminder(id);
+  renderHomeReminders();
+  renderCalGrid();
+}
+
+function homeDeleteReminder(id) {
+  deleteReminder(id);
+  renderHomeReminders();
+  renderCalGrid();
 }
 
 /** Lista voci (entrate + uscite) del giorno selezionato. */
@@ -2883,6 +2931,16 @@ async function calAddAppuntamento() {
   await addAppuntamento(dateIso, timeVal, client, amtRaw, notes);
   btn.disabled = false;
   btn.textContent = 'Aggiungi';
+
+  // Crea reminder collegato se richiesto
+  const remChk = document.getElementById('add-apt-reminder-chk');
+  if (remChk?.checked) {
+    const remText = document.getElementById('add-apt-reminder-text').value.trim();
+    if (remText) addReminder(dateIso, remText);
+    remChk.checked = false;
+    document.getElementById('add-apt-reminder-wrap').style.display = 'none';
+    document.getElementById('add-apt-reminder-text').value = '';
+  }
 
   // Reset form (data e ora rimangono precompilati)
   ['add-apt-client','add-apt-amount','add-apt-notes'].forEach(id => {
