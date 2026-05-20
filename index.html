@@ -1762,19 +1762,39 @@ async function addAppuntamento(dateIso, timeVal, client, amtRaw, notes) {
   }
 }
 
+let _delAptCallback = null;
+
+function showDelAptConfirm(onConfirm) {
+  _delAptCallback = onConfirm;
+  document.getElementById('del-apt-overlay').style.display = 'block';
+  document.getElementById('del-apt-sheet').style.display = 'block';
+  document.getElementById('del-apt-confirm-btn').onclick = async () => {
+    hideDelAptConfirm();
+    if (_delAptCallback) await _delAptCallback();
+    _delAptCallback = null;
+  };
+}
+
+function hideDelAptConfirm() {
+  document.getElementById('del-apt-overlay').style.display = 'none';
+  document.getElementById('del-apt-sheet').style.display = 'none';
+}
+
 async function deleteAppuntamento(id) {
   if (!currentUser) return false;
-  if (!confirm('Eliminare questo appuntamento?')) return false;
-  const { error } = await sb.from('appuntamenti').delete().eq('id', id).eq('user_id', currentUser.id);
-  if (!error) {
-    appuntamenti = appuntamenti.filter(a => String(a.id) !== String(id));
-    showToast('Appuntamento eliminato');
-    return true;
-  } else {
-    console.error('deleteAppuntamento error:', error);
-    showToast('Errore eliminazione: ' + (error.message || 'Riprovare'));
-    return false;
-  }
+  return new Promise(resolve => {
+    showDelAptConfirm(async () => {
+      const { error } = await sb.from('appuntamenti').delete().eq('id', id).eq('user_id', currentUser.id);
+      if (!error) {
+        appuntamenti = appuntamenti.filter(a => String(a.id) !== String(id));
+        showToast('Appuntamento eliminato');
+        resolve(true);
+      } else {
+        showToast('Errore eliminazione: ' + (error.message || 'Riprovare'));
+        resolve(false);
+      }
+    });
+  });
 }
 
 async function confirmRiportaEntrata(id, tassata) {
@@ -2299,7 +2319,11 @@ function _confirmTax() {
 /* ── Riporta appuntamento come entrata ── */
 async function homeRiporta(id) {
   _showTaxModal(id, async (tassata) => {
-    await confirmRiportaEntrata(id, tassata);
+    try {
+      await confirmRiportaEntrata(id, tassata);
+    } catch(e) {
+      showToast('Errore: ' + (e.message || 'Riprova'));
+    }
     renderHomeView();
   });
 }
@@ -3570,6 +3594,15 @@ window.addEventListener('DOMContentLoaded', async () => {
   }
 });
 </script>
+
+<!-- Delete appointment confirm sheet -->
+<div id="del-apt-overlay" onclick="hideDelAptConfirm()" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:9998"></div>
+<div id="del-apt-sheet" style="display:none;position:fixed;bottom:0;left:0;right:0;background:#fff;border-radius:20px 20px 0 0;padding:1.5rem 1.25rem calc(1.5rem + env(safe-area-inset-bottom));z-index:9999">
+  <div style="font-size:1rem;font-weight:700;margin-bottom:.35rem">Eliminare appuntamento?</div>
+  <div style="font-size:.875rem;color:var(--text2);margin-bottom:1.25rem">L'operazione non è reversibile.</div>
+  <button id="del-apt-confirm-btn" style="width:100%;padding:.85rem;background:var(--red);color:#fff;border:none;border-radius:var(--radius-sm);font-size:.95rem;font-weight:700;font-family:inherit;cursor:pointer;margin-bottom:.6rem">Elimina</button>
+  <button onclick="hideDelAptConfirm()" style="width:100%;padding:.85rem;background:var(--bg2);color:var(--text1);border:none;border-radius:var(--radius-sm);font-size:.95rem;font-weight:600;font-family:inherit;cursor:pointer">Annulla</button>
+</div>
 
 <!-- Logout confirm sheet (root level per evitare problemi fixed su iOS) -->
 <div id="logout-overlay" onclick="hideLogoutConfirm()" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:9998"></div>
