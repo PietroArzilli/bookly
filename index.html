@@ -3651,10 +3651,9 @@ window.addEventListener('DOMContentLoaded', async () => {
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('/inkbooks/sw.js', { updateViaCache: 'none' });
     // Quando il nuovo SW prende controllo, ricarica silenziosamente
-    let swRefreshing = false;
     navigator.serviceWorker.addEventListener('controllerchange', () => {
-      if (swRefreshing) return;
-      swRefreshing = true;
+      if (sessionStorage.getItem('sw-reloaded')) return;
+      sessionStorage.setItem('sw-reloaded', '1');
       window.location.reload();
     });
   }
