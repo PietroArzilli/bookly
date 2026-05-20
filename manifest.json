@@ -1,12 +1,12 @@
 {
-  "name": "InkBooks",
-  "short_name": "InkBooks",
+  "name": "Bookly",
+  "short_name": "Bookly",
   "description": "Gestione finance per tatuatori",
   "start_url": "/inkbooks/",
   "scope": "/inkbooks/",
   "display": "standalone",
   "orientation": "portrait",
-  "theme_color": "#007aff",
+  "theme_color": "#0D4D5C",
   "background_color": "#f2f2f7",
   "icons": [
     {

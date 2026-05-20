@@ -3,12 +3,12 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>InkBooks</title>
+<title>Bookly</title>
 <link rel="manifest" href="/inkbooks/manifest.json">
-<meta name="theme-color" content="#007aff">
+<meta name="theme-color" content="#0D4D5C">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
-<meta name="apple-mobile-web-app-title" content="InkBooks">
+<meta name="apple-mobile-web-app-title" content="Bookly">
 <link rel="apple-touch-icon" href="/inkbooks/icon.svg">
 <style>
 /* ============================================================
@@ -26,8 +26,10 @@
   --text3:     #aeaeb2;
 
   /* Accento principale */
-  --accent:       #007aff;
-  --accent-light: rgba(0,122,255,0.12);
+  --accent:       #0D4D5C;
+  --accent-light: rgba(13,77,92,0.12);
+  --coral:        #FF6B5B;
+  --coral-light:  rgba(255,107,91,0.12);
 
   /* Semantici */
   --green:       #34c759;
@@ -110,7 +112,7 @@ body {
   letter-spacing: -0.02em;
   color: var(--text);
 }
-.loading-logo em { font-style: italic; color: var(--accent); }
+.loading-logo em { font-style: italic; color: var(--coral); }
 .loading-spinner {
   width: 24px; height: 24px;
   border: 2px solid var(--border);
@@ -149,7 +151,7 @@ body {
   letter-spacing: -0.02em;
   margin-bottom: 0.25rem;
 }
-.auth-logo em { font-style: italic; color: var(--accent); }
+.auth-logo em { font-style: italic; color: var(--coral); }
 .auth-subtitle {
   text-align: center;
   font-size: .82rem;
@@ -218,7 +220,7 @@ body {
   font-weight: 700;
   letter-spacing: -0.02em;
 }
-.header-logo em { font-style: italic; color: var(--accent); }
+.header-logo em { font-style: italic; color: var(--coral); }
 
 /* Area scrollabile che contiene le sezioni */
 #sections-container {
@@ -534,7 +536,7 @@ body {
 .modal-seg-btn.active { background:var(--surface); color:var(--text); font-weight:700; box-shadow:0 1px 3px rgba(0,0,0,.1); }
 
 /* ── FAB flottante ── */
-.fab-btn { position:fixed; bottom:calc(var(--nav-h) + var(--safe-b) + .9rem); right:1.1rem; width:52px; height:52px; border-radius:50%; background:var(--accent); color:#fff; border:none; cursor:pointer; font-size:1.6rem; line-height:1; display:flex; align-items:center; justify-content:center; box-shadow:0 4px 16px rgba(0,122,255,.4); z-index:200; transition:transform .1s; }
+.fab-btn { position:fixed; bottom:calc(var(--nav-h) + var(--safe-b) + .9rem); right:1.1rem; width:52px; height:52px; border-radius:50%; background:var(--accent); color:#fff; border:none; cursor:pointer; font-size:1.6rem; line-height:1; display:flex; align-items:center; justify-content:center; box-shadow:0 4px 16px rgba(13,77,92,.4); z-index:200; transition:transform .1s; }
 .fab-btn:active { transform:scale(.93); }
 
 /* ── APPUNTAMENTI: lista card ── */
@@ -621,7 +623,8 @@ body {
        ===================================================== -->
   <div id="screen-loading" class="screen active">
     <div style="text-align:center">
-      <div class="loading-logo">Ink<em>Books</em></div>
+      <img src="/inkbooks/icon.svg" style="width:80px;height:80px;margin-bottom:.75rem;border-radius:18px">
+      <div class="loading-logo">Book<em>ly</em></div>
       <div class="loading-spinner"></div>
     </div>
   </div>
@@ -634,7 +637,7 @@ body {
     <div class="auth-card">
 
       <!-- Logo -->
-      <div class="auth-logo">Ink<em>Books</em></div>
+      <div class="auth-logo">Book<em>ly</em></div>
       <div class="auth-subtitle" id="auth-subtitle">Accedi al tuo account</div>
 
       <!-- Errore globale auth -->
@@ -740,7 +743,7 @@ body {
        ===================================================== -->
   <div id="screen-setup" class="screen">
     <div class="auth-card" style="max-width:380px;margin:auto">
-      <div class="auth-logo" style="margin-bottom:.25rem">Ink<em>Books</em></div>
+      <div class="auth-logo" style="margin-bottom:.25rem">Book<em>ly</em></div>
       <div class="auth-subtitle">Configura il tuo profilo</div>
       <p style="font-size:.82rem;color:var(--text3);margin-bottom:1.5rem;text-align:center;line-height:1.5">
         Inserisci le tue percentuali fiscali.<br>Potrai modificarle in seguito dal Profilo.
@@ -770,7 +773,7 @@ body {
 
     <!-- Header -->
     <header id="app-header">
-      <span class="header-logo">Ink<em>Books</em></span>
+      <span class="header-logo">Book<em>ly</em></span>
     </header>
 
     <!-- Contenuto sezioni (scrollabile) -->
@@ -957,7 +960,7 @@ body {
 
           <!-- Logout -->
           <button class="prof-logout-btn" onclick="doLogout()">Esci dall'account</button>
-          <div class="prof-version">InkBooks · v1.0</div>
+          <div class="prof-version">Bookly · v1.0</div>
 
         </div>
       </div>
@@ -1360,7 +1363,7 @@ body {
      ============================================================ -->
 <script>
 // =====================================================
-// api.js — Logica backend condivisa per InkBooks
+// api.js — Logica backend condivisa per Bookly
 // =====================================================
 
 // Configurazione Supabase
@@ -3505,7 +3508,7 @@ window.addEventListener('DOMContentLoaded', async () => {
   if (typeof sb === 'undefined') {
     clearTimeout(loadingTimeout);
     _showLoadingError(
-      'Serve la connessione internet per aprire InkBooks.<br>' +
+      'Serve la connessione internet per aprire Bookly.<br>' +
       'Connettiti al Wi-Fi e ricarica la pagina.'
     );
     return;
