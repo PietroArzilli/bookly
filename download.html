@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Bookly — Scarica l'app</title>
+  <link rel="icon" href="/inkbooks/icon.svg">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Nunito+Sans:wght@400;600;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --teal: #0D4D5C;
+      --coral: #FF6B5B;
+      --bg: #f5f7f8;
+      --card: #ffffff;
+      --text1: #111;
+      --text2: #555;
+      --text3: #999;
+      --radius: 20px;
+    }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background: var(--bg);
+      color: var(--text1);
+      min-height: 100dvh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 2rem 1.25rem;
+    }
+
+    .card {
+      background: var(--card);
+      border-radius: var(--radius);
+      padding: 2.5rem 2rem;
+      max-width: 400px;
+      width: 100%;
+      text-align: center;
+      box-shadow: 0 4px 32px rgba(13,77,92,.08);
+    }
+
+    .logo-icon {
+      width: 80px;
+      height: 80px;
+      border-radius: 20px;
+      margin: 0 auto 1.25rem;
+      display: block;
+    }
+
+    .logo-text {
+      font-family: 'Nunito Sans', sans-serif;
+      font-weight: 800;
+      font-size: 2rem;
+      letter-spacing: -0.01em;
+      line-height: 1;
+      margin-bottom: .5rem;
+    }
+    .logo-text .book { color: var(--teal); }
+    .logo-text .ly   { color: var(--coral); }
+
+    .tagline {
+      font-size: .95rem;
+      color: var(--text2);
+      line-height: 1.5;
+      margin-bottom: 2rem;
+    }
+
+    .btn-install {
+      width: 100%;
+      padding: 1rem;
+      background: var(--teal);
+      color: #fff;
+      border: none;
+      border-radius: 14px;
+      font-size: 1rem;
+      font-weight: 700;
+      font-family: 'Inter', sans-serif;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: .6rem;
+      transition: opacity .15s;
+    }
+    .btn-install:active { opacity: .8; }
+
+    .btn-open {
+      width: 100%;
+      margin-top: .75rem;
+      padding: .85rem;
+      background: transparent;
+      color: var(--teal);
+      border: 2px solid var(--teal);
+      border-radius: 14px;
+      font-size: .95rem;
+      font-weight: 600;
+      font-family: 'Inter', sans-serif;
+      cursor: pointer;
+      transition: opacity .15s;
+      text-decoration: none;
+      display: block;
+    }
+    .btn-open:active { opacity: .7; }
+
+    .already-msg {
+      margin-top: 1rem;
+      font-size: .8rem;
+      color: var(--text3);
+    }
+
+    /* iOS guide modal */
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,.5);
+      z-index: 100;
+      align-items: flex-end;
+      justify-content: center;
+    }
+    .modal-overlay.open { display: flex; }
+
+    .modal-sheet {
+      background: #fff;
+      border-radius: 24px 24px 0 0;
+      padding: 1.75rem 1.5rem calc(2rem + env(safe-area-inset-bottom));
+      width: 100%;
+      max-width: 480px;
+    }
+
+    .modal-title {
+      font-size: 1.1rem;
+      font-weight: 700;
+      margin-bottom: 1.5rem;
+      text-align: center;
+    }
+
+    .step {
+      display: flex;
+      align-items: flex-start;
+      gap: 1rem;
+      margin-bottom: 1.25rem;
+    }
+    .step-num {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      background: var(--teal);
+      color: #fff;
+      font-weight: 700;
+      font-size: .85rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      margin-top: 1px;
+    }
+    .step-text {
+      font-size: .9rem;
+      line-height: 1.5;
+      color: var(--text1);
+    }
+    .step-text strong { color: var(--teal); }
+
+    .share-icon {
+      display: inline-block;
+      vertical-align: middle;
+      width: 20px;
+      height: 20px;
+      margin: 0 2px;
+    }
+
+    .btn-close {
+      width: 100%;
+      margin-top: 1.5rem;
+      padding: .85rem;
+      background: #f0f0f5;
+      color: var(--text1);
+      border: none;
+      border-radius: 12px;
+      font-size: .95rem;
+      font-weight: 600;
+      font-family: 'Inter', sans-serif;
+      cursor: pointer;
+    }
+
+    .features {
+      margin-top: 2rem;
+      display: flex;
+      flex-direction: column;
+      gap: .6rem;
+      text-align: left;
+    }
+    .feature {
+      display: flex;
+      align-items: center;
+      gap: .6rem;
+      font-size: .875rem;
+      color: var(--text2);
+    }
+    .feature-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--coral);
+      flex-shrink: 0;
+    }
+
+    .footer {
+      margin-top: 2rem;
+      font-size: .72rem;
+      color: var(--text3);
+    }
+  </style>
+</head>
+<body>
+
+<div class="card">
+  <img src="/inkbooks/icon.png" class="logo-icon" alt="Bookly">
+  <div class="logo-text"><span class="book">book</span><span class="ly">ly</span></div>
+  <p class="tagline">Gestisci appuntamenti e finanze del tuo studio.<br>Zero sbatti, tutto in un click.</p>
+
+  <button class="btn-install" id="btn-install" style="display:none">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v13M7 11l5 5 5-5"/><path d="M5 21h14"/></svg>
+    Aggiungi alla Home
+  </button>
+
+  <button class="btn-install" id="btn-ios" style="display:none">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v13M7 11l5 5 5-5"/><path d="M5 21h14"/></svg>
+    Aggiungi alla Home
+  </button>
+
+  <a href="/inkbooks/" class="btn-open">Apri nel browser</a>
+
+  <div class="features">
+    <div class="feature"><div class="feature-dot"></div>Appuntamenti e calendario</div>
+    <div class="feature"><div class="feature-dot"></div>Entrate e spese ricorrenti</div>
+    <div class="feature"><div class="feature-dot"></div>Promemoria giornalieri</div>
+    <div class="feature"><div class="feature-dot"></div>Funziona offline</div>
+  </div>
+</div>
+
+<p class="footer">Bookly · v1.0 · Solo per tatuatori</p>
+
+<!-- iOS guide modal -->
+<div class="modal-overlay" id="ios-modal">
+  <div class="modal-sheet">
+    <div class="modal-title">Aggiungi alla Home Screen</div>
+
+    <div class="step">
+      <div class="step-num">1</div>
+      <div class="step-text">
+        Tocca l'icona
+        <svg class="share-icon" viewBox="0 0 24 24" fill="none" stroke="#0D4D5C" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>
+        <strong>Condividi</strong> in basso nel browser Safari
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-num">2</div>
+      <div class="step-text">Scorri e tocca <strong>Aggiungi alla schermata Home</strong></div>
+    </div>
+
+    <div class="step">
+      <div class="step-num">3</div>
+      <div class="step-text">Tocca <strong>Aggiungi</strong> in alto a destra — fatto!</div>
+    </div>
+
+    <button class="btn-close" onclick="closeIosModal()">Ho capito</button>
+  </div>
+</div>
+
+<script>
+  let deferredPrompt = null;
+
+  const isIos = /iphone|ipad|ipod/i.test(navigator.userAgent);
+  const isStandalone = window.matchMedia('(display-mode: standalone)').matches
+    || window.navigator.standalone === true;
+
+  if (isStandalone) {
+    // già installata — mostra solo il link per aprirla
+    document.querySelector('.btn-open').textContent = 'Apri Bookly';
+  } else if (isIos) {
+    document.getElementById('btn-ios').style.display = 'flex';
+    document.getElementById('btn-ios').addEventListener('click', () => {
+      document.getElementById('ios-modal').classList.add('open');
+    });
+  } else {
+    // Android / Chrome: aspetta beforeinstallprompt
+    window.addEventListener('beforeinstallprompt', e => {
+      e.preventDefault();
+      deferredPrompt = e;
+      document.getElementById('btn-install').style.display = 'flex';
+    });
+
+    document.getElementById('btn-install').addEventListener('click', async () => {
+      if (!deferredPrompt) return;
+      deferredPrompt.prompt();
+      const { outcome } = await deferredPrompt.userChoice;
+      if (outcome === 'accepted') {
+        document.getElementById('btn-install').style.display = 'none';
+      }
+      deferredPrompt = null;
+    });
+  }
+
+  function closeIosModal() {
+    document.getElementById('ios-modal').classList.remove('open');
+  }
+
+  document.getElementById('ios-modal').addEventListener('click', e => {
+    if (e.target === document.getElementById('ios-modal')) closeIosModal();
+  });
+</script>
+</body>
+</html>
