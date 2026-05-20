@@ -1363,8 +1363,6 @@ body {
 <!-- Toast globale (usato da showToast in api.js) -->
 <div id="toast"></div>
 
-<!-- Bottone nascosto richiesto internamente da addAppuntamento() in api.js -->
-<button id="btn-add-apt" style="display:none" aria-hidden="true"></button>
 
 <!-- Libreria Supabase JS (richiesta da api.js) -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -1745,10 +1743,6 @@ async function deleteEntry(type, id) {
 // APPUNTAMENTI
 // =====================================================
 async function addAppuntamento(dateIso, timeVal, client, amtRaw, notes) {
-  const btn = document.getElementById('btn-add-apt');
-  if (!btn) return null;
-  btn.disabled = true;
-
   const dataOra = timeVal
     ? dateIso + 'T' + timeVal + ':00' + getTzOffset()
     : dateIso + 'T00:00:00Z';
@@ -1762,17 +1756,13 @@ async function addAppuntamento(dateIso, timeVal, client, amtRaw, notes) {
     stato:            'confermato'
   }).select().single();
 
-  btn.disabled = false;
-
   if (!error && data) {
     const { start, end } = monthRange();
     const aptLocalDate = data.data_ora ? new Date(data.data_ora).toLocaleDateString('sv') : null;
     if (aptLocalDate && aptLocalDate >= start && aptLocalDate <= end) appuntamenti.push(data);
-    showToast('Appuntamento aggiunto');
     return data;
   } else {
-    showToast('Errore: ' + (error?.message || 'Riprovare'));
-    return null;
+    throw new Error(error?.message || 'Errore Supabase');
   }
 }
 
@@ -2954,7 +2944,14 @@ async function calAddAppuntamento() {
   const btn = document.getElementById('btn-add-apt-cal');
   btn.disabled = true;
   btn.textContent = 'Salvataggio…';
-  await addAppuntamento(dateIso, timeVal, client, amtRaw, notes);
+  try {
+    await addAppuntamento(dateIso, timeVal, client, amtRaw, notes);
+  } catch(e) {
+    showToast('Errore durante il salvataggio, riprova');
+    btn.disabled = false;
+    btn.textContent = 'Aggiungi';
+    return;
+  }
   btn.disabled = false;
   btn.textContent = 'Aggiungi';
 
