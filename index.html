@@ -134,6 +134,30 @@ body {
 @keyframes spin { to { transform: rotate(360deg); } }
 
 /* ============================================================
+   SCHERMATA: INSTALL
+   ============================================================ */
+#screen-install {
+  align-items: center;
+  justify-content: center;
+  padding: 2rem 1.25rem;
+  min-height: 100%;
+  flex-direction: column;
+  text-align: center;
+}
+#screen-install.active { display: flex; }
+
+.install-icon { width: 80px; height: 80px; border-radius: 20px; margin-bottom: 1.25rem; }
+.install-title { font-family: 'Nunito Sans', sans-serif; font-weight: 800; font-size: 1.8rem; letter-spacing: -.01em; margin-bottom: .4rem; }
+.install-title .bk { color: var(--accent); }
+.install-title .ly { color: var(--coral); }
+.install-sub { font-size: .9rem; color: var(--text2); line-height: 1.5; margin-bottom: 2rem; }
+.install-btn { width: 100%; max-width: 340px; padding: .95rem; border: none; border-radius: 14px; font-size: .95rem; font-weight: 700; font-family: inherit; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: .6rem; margin-bottom: .75rem; }
+.install-btn-primary { background: var(--accent); color: #fff; }
+.install-btn-secondary { background: var(--coral); color: #fff; }
+.install-btn-ghost { background: transparent; color: var(--text3); font-size: .85rem; font-weight: 500; padding: .6rem; }
+.install-btn:active { opacity: .8; }
+
+/* ============================================================
    SCHERMATA: AUTH (Login / Registrazione / Verifica OTP)
    ============================================================ */
 #screen-auth {
@@ -637,6 +661,30 @@ body {
       <div class="bly" style="font-size:2.6rem;margin-bottom:.25rem"><span class="bly-book">book</span><span class="bly-ly">ly</span></div>
       <div class="loading-spinner"></div>
     </div>
+  </div>
+
+  <!-- =====================================================
+       SCHERMATA: INSTALL
+       Mostrata solo se non standalone e non loggato.
+       ===================================================== -->
+  <div id="screen-install" class="screen">
+    <img src="/inkbooks/icon.png" class="install-icon" alt="Bookly">
+    <div class="install-title"><span class="bk">book</span><span class="ly">ly</span></div>
+    <p class="install-sub">Gestisci appuntamenti e finanze<br>del tuo studio. Zero sbatti.</p>
+
+    <!-- Android: bottone nativo (visibile solo se beforeinstallprompt disponibile) -->
+    <button id="install-btn-android" class="install-btn install-btn-primary" style="display:none" onclick="triggerAndroidInstall()">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v13M7 11l5 5 5-5"/><path d="M5 21h14"/></svg>
+      Scarica l'app
+    </button>
+
+    <!-- iOS: apre pagina istruzioni -->
+    <button id="install-btn-ios" class="install-btn install-btn-primary" style="display:none" onclick="window.open('/inkbooks/installa-ios.html','_blank')">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v13M7 11l5 5 5-5"/><path d="M5 21h14"/></svg>
+      Come installare l'app
+    </button>
+
+    <button class="install-btn install-btn-ghost" onclick="_showAuth()">Ho già l'app →</button>
   </div>
 
   <!-- =====================================================
@@ -3447,6 +3495,35 @@ async function _runAfterLogin(user) {
   }
 }
 
+const _isStandalone = window.matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
+const _isIos = /iphone|ipad|ipod/i.test(navigator.userAgent);
+let _installPrompt = null;
+
+window.addEventListener('beforeinstallprompt', e => {
+  e.preventDefault();
+  _installPrompt = e;
+  const btn = document.getElementById('install-btn-android');
+  if (btn) btn.style.display = 'flex';
+});
+
+async function triggerAndroidInstall() {
+  if (!_installPrompt) return;
+  _installPrompt.prompt();
+  await _installPrompt.userChoice;
+  _installPrompt = null;
+}
+
+function _showInstallOrAuth() {
+  if (_isStandalone) { _showAuth(); return; }
+  if (_isIos) {
+    document.getElementById('install-btn-ios').style.display = 'flex';
+    showScreen('install');
+    return;
+  }
+  // Android/Chrome: mostra schermata, il bottone appare quando arriva beforeinstallprompt
+  showScreen('install');
+}
+
 function _showAuth() {
   showScreen('auth');
   switchAuth('login');
@@ -3560,11 +3637,11 @@ window.addEventListener('DOMContentLoaded', async () => {
       await _runAfterLogin(data.session.user);
     } else {
       localStorage.removeItem('ib_uid');
-      _showAuth();
+      _showInstallOrAuth();
     }
   } catch (e) {
     console.error('[init]', e);
-    _showAuth();
+    _showInstallOrAuth();
   } finally {
     clearTimeout(loadingTimeout);
   }

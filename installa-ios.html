@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Installa Bookly su iPhone</title>
+  <link rel="icon" href="/inkbooks/icon.svg">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Nunito+Sans:wght@800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Inter', sans-serif;
+      background: #f5f7f8;
+      color: #111;
+      min-height: 100dvh;
+      padding: 2rem 1.25rem calc(2rem + env(safe-area-inset-bottom));
+    }
+
+    .header {
+      display: flex;
+      align-items: center;
+      gap: .85rem;
+      margin-bottom: 2rem;
+    }
+    .header img { width: 52px; height: 52px; border-radius: 13px; }
+    .logo { font-family: 'Nunito Sans', sans-serif; font-weight: 800; font-size: 1.5rem; letter-spacing: -.01em; }
+    .logo .bk { color: #0D4D5C; }
+    .logo .ly { color: #FF6B5B; }
+
+    h1 { font-size: 1.35rem; font-weight: 700; margin-bottom: .4rem; }
+    .sub { font-size: .9rem; color: #666; margin-bottom: 2rem; line-height: 1.5; }
+
+    .step {
+      background: #fff;
+      border-radius: 16px;
+      padding: 1.1rem 1.1rem;
+      margin-bottom: .75rem;
+      display: flex;
+      align-items: flex-start;
+      gap: 1rem;
+      box-shadow: 0 2px 12px rgba(0,0,0,.05);
+    }
+    .step-num {
+      width: 30px;
+      height: 30px;
+      border-radius: 50%;
+      background: #0D4D5C;
+      color: #fff;
+      font-weight: 700;
+      font-size: .85rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+    .step-body { flex: 1; padding-top: 4px; }
+    .step-title { font-weight: 600; font-size: .95rem; margin-bottom: .2rem; }
+    .step-desc { font-size: .83rem; color: #666; line-height: 1.5; }
+    .step-desc strong { color: #0D4D5C; }
+
+    .share-svg { display: inline-block; vertical-align: middle; margin: 0 2px; }
+
+    .tip {
+      background: rgba(255,107,91,.08);
+      border-left: 3px solid #FF6B5B;
+      border-radius: 8px;
+      padding: .75rem 1rem;
+      font-size: .82rem;
+      color: #555;
+      margin-top: 1.25rem;
+      line-height: 1.5;
+    }
+
+    .btn-back {
+      display: block;
+      width: 100%;
+      margin-top: 1.75rem;
+      padding: .95rem;
+      background: #0D4D5C;
+      color: #fff;
+      border: none;
+      border-radius: 14px;
+      font-size: .95rem;
+      font-weight: 700;
+      font-family: 'Inter', sans-serif;
+      text-align: center;
+      text-decoration: none;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="header">
+    <img src="/inkbooks/icon.png" alt="Bookly">
+    <div class="logo"><span class="bk">book</span><span class="ly">ly</span></div>
+  </div>
+
+  <h1>Installa su iPhone</h1>
+  <p class="sub">Segui questi 3 passi per aggiungere Bookly alla tua schermata Home — ci vuole meno di un minuto.</p>
+
+  <div class="step">
+    <div class="step-num">1</div>
+    <div class="step-body">
+      <div class="step-title">Apri Safari</div>
+      <div class="step-desc">Assicurati di usare Safari (non Chrome o altri browser) — solo Safari supporta l'installazione su iPhone.</div>
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="step-num">2</div>
+    <div class="step-body">
+      <div class="step-title">Tocca
+        <svg class="share-svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#0D4D5C" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>
+        Condividi
+      </div>
+      <div class="step-desc">Trovi l'icona <strong>Condividi</strong> al centro in basso nella barra di Safari. Toccala.</div>
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="step-num">3</div>
+    <div class="step-body">
+      <div class="step-title">Aggiungi alla schermata Home</div>
+      <div class="step-desc">Scorri il menu verso il basso e tocca <strong>Aggiungi alla schermata Home</strong>, poi tocca <strong>Aggiungi</strong> in alto a destra.</div>
+    </div>
+  </div>
+
+  <div class="tip">
+    Dopo l'installazione trovi l'icona di Bookly nella tua Home come qualsiasi altra app — nessun App Store, nessun download.
+  </div>
+
+  <a href="/inkbooks/" class="btn-back">Vai a Bookly →</a>
+
+</body>
+</html>
