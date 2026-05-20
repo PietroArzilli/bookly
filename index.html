@@ -655,25 +655,25 @@ body {
 
       <!-- ── FORM LOGIN ── -->
       <div id="form-login">
-        <div class="field">
-          <label class="field-label" for="login-email">Email</label>
-          <input type="email" id="login-email" class="field-input"
-            placeholder="tu@email.com"
-            autocomplete="email" inputmode="email"
-            onkeydown="if(event.key==='Enter') doLogin()">
-        </div>
-        <div class="field">
-          <label class="field-label" for="login-password">Password</label>
-          <div class="password-wrap">
-            <input type="password" id="login-password" class="field-input"
-              placeholder="••••••••"
-              autocomplete="current-password"
-              onkeydown="if(event.key==='Enter') doLogin()">
-            <button type="button" class="password-toggle"
-              onclick="togglePwd('login-password', this)">Mostra</button>
+        <form onsubmit="doLogin(); return false;" autocomplete="on">
+          <div class="field">
+            <label class="field-label" for="login-email">Email</label>
+            <input type="email" id="login-email" class="field-input"
+              placeholder="tu@email.com"
+              autocomplete="email" inputmode="email">
           </div>
-        </div>
-        <button id="btn-login" class="btn btn-primary" onclick="doLogin()">Accedi</button>
+          <div class="field">
+            <label class="field-label" for="login-password">Password</label>
+            <div class="password-wrap">
+              <input type="password" id="login-password" class="field-input"
+                placeholder="••••••••"
+                autocomplete="current-password">
+              <button type="button" class="password-toggle"
+                onclick="togglePwd('login-password', this)">Mostra</button>
+            </div>
+          </div>
+          <button id="btn-login" type="submit" class="btn btn-primary">Accedi</button>
+        </form>
         <div class="auth-switch" id="auth-switch-login">
           Non hai un account?
           <button onclick="switchAuth('register')">Registrati</button>
@@ -682,25 +682,25 @@ body {
 
       <!-- ── FORM REGISTRAZIONE ── -->
       <div id="form-register" style="display:none">
-        <div class="field">
-          <label class="field-label" for="reg-email">Email</label>
-          <input type="email" id="reg-email" class="field-input"
-            placeholder="tu@email.com"
-            autocomplete="email" inputmode="email"
-            onkeydown="if(event.key==='Enter') doRegister()">
-        </div>
-        <div class="field">
-          <label class="field-label" for="reg-password">Password <span style="font-weight:400;color:var(--text3)">(min. 6 caratteri)</span></label>
-          <div class="password-wrap">
-            <input type="password" id="reg-password" class="field-input"
-              placeholder="••••••••"
-              autocomplete="new-password"
-              onkeydown="if(event.key==='Enter') doRegister()">
-            <button type="button" class="password-toggle"
-              onclick="togglePwd('reg-password', this)">Mostra</button>
+        <form onsubmit="doRegister(); return false;" autocomplete="on">
+          <div class="field">
+            <label class="field-label" for="reg-email">Email</label>
+            <input type="email" id="reg-email" class="field-input"
+              placeholder="tu@email.com"
+              autocomplete="email" inputmode="email">
           </div>
-        </div>
-        <button id="btn-register" class="btn btn-primary" onclick="doRegister()">Crea account</button>
+          <div class="field">
+            <label class="field-label" for="reg-password">Password <span style="font-weight:400;color:var(--text3)">(min. 6 caratteri)</span></label>
+            <div class="password-wrap">
+              <input type="password" id="reg-password" class="field-input"
+                placeholder="••••••••"
+                autocomplete="new-password">
+              <button type="button" class="password-toggle"
+                onclick="togglePwd('reg-password', this)">Mostra</button>
+            </div>
+          </div>
+          <button id="btn-register" type="submit" class="btn btn-primary">Crea account</button>
+        </form>
         <div class="auth-switch" id="auth-switch-reg">
           Hai già un account?
           <button onclick="switchAuth('login')">Accedi</button>
@@ -969,7 +969,7 @@ body {
           </div>
 
           <!-- Logout -->
-          <button class="prof-logout-btn" onclick="doLogout()">Esci dall'account</button>
+          <button class="prof-logout-btn" onclick="showLogoutConfirm()">Esci dall'account</button>
           <div class="prof-version">Bookly · v1.0</div>
 
         </div>
@@ -1527,9 +1527,21 @@ async function doResendCode() {
   else showToast('Errore nel reinvio. Riprova tra qualche secondo.');
 }
 
+function showLogoutConfirm() {
+  document.getElementById('logout-overlay').style.display = 'block';
+  document.getElementById('logout-sheet').style.display = 'block';
+}
+
+function hideLogoutConfirm() {
+  document.getElementById('logout-overlay').style.display = 'none';
+  document.getElementById('logout-sheet').style.display = 'none';
+}
+
 async function doLogout() {
+  hideLogoutConfirm();
   await sb.auth.signOut();
   localStorage.clear();
+  _showAuth();
 }
 
 async function clearSession() {
@@ -3376,10 +3388,6 @@ async function handleSetup() {
    LOGOUT
 ───────────────────────────────────────────── */
 
-async function handleLogout() {
-  if (!confirm('Vuoi uscire dall\'account?')) return;
-  await sb.auth.signOut();
-}
 
 /* ─────────────────────────────────────────────
    TOGGLE PASSWORD VISIBILE
@@ -3564,13 +3572,24 @@ window.addEventListener('DOMContentLoaded', async () => {
 
   // Registra Service Worker per apertura istantanea
   if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('/inkbooks/sw.js');
-    // Quando il SW aggiorna l'app in background, avvisa l'utente
+    navigator.serviceWorker.register('/inkbooks/sw.js', { updateViaCache: 'none' });
+    // Quando il nuovo SW prende controllo, ricarica silenziosamente
+    let swRefreshing = false;
     navigator.serviceWorker.addEventListener('controllerchange', () => {
-      showToast('Aggiornamento disponibile — riaprendo la prossima volta vedrai le novità');
+      if (swRefreshing) return;
+      swRefreshing = true;
+      window.location.reload();
     });
-  }
 });
 </script>
+
+<!-- Logout confirm sheet (root level per evitare problemi fixed su iOS) -->
+<div id="logout-overlay" onclick="hideLogoutConfirm()" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:9998"></div>
+<div id="logout-sheet" style="display:none;position:fixed;bottom:0;left:0;right:0;background:#fff;border-radius:20px 20px 0 0;padding:1.5rem 1.25rem calc(1.5rem + env(safe-area-inset-bottom));z-index:9999">
+  <div style="font-size:1rem;font-weight:700;margin-bottom:.35rem">Esci dall'account?</div>
+  <div style="font-size:.875rem;color:var(--text2);margin-bottom:1.25rem">Dovrai fare di nuovo il login la prossima volta.</div>
+  <button onclick="doLogout()" style="width:100%;padding:.85rem;background:var(--red);color:#fff;border:none;border-radius:var(--radius-sm);font-size:.95rem;font-weight:700;font-family:inherit;cursor:pointer;margin-bottom:.6rem">Esci</button>
+  <button onclick="hideLogoutConfirm()" style="width:100%;padding:.85rem;background:var(--bg2);color:var(--text1);border:none;border-radius:var(--radius-sm);font-size:.95rem;font-weight:600;font-family:inherit;cursor:pointer">Annulla</button>
+</div>
 </body>
 </html>
