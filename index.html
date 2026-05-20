@@ -1170,47 +1170,6 @@ body {
   </div>
 </div>
 
-<!-- ── MODALE NUOVO APPUNTAMENTO ── -->
-<div id="new-apt-modal"
-  style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:8200;
-         align-items:flex-end;justify-content:center"
-  onclick="if(event.target===this) closeNewAptModal()">
-  <div style="background:var(--surface);border-radius:var(--radius) var(--radius) 0 0;
-              width:100%;max-width:600px;padding:1.5rem 1.25rem 2rem;
-              box-shadow:0 -4px 24px rgba(0,0,0,.15);max-height:90vh;overflow-y:auto">
-    <div style="font-weight:700;font-size:1rem;margin-bottom:1.25rem">Nuovo appuntamento</div>
-    <div class="field">
-      <label class="field-label">Data</label>
-      <input type="text" id="new-apt-date" class="field-input"
-        placeholder="GG/MM/AAAA" maxlength="10" inputmode="numeric" autocomplete="off">
-    </div>
-    <div class="field">
-      <label class="field-label">Ora <span style="font-weight:400;color:var(--text3)">(opzionale)</span></label>
-      <input type="time" id="new-apt-time" class="field-input">
-    </div>
-    <div class="field">
-      <label class="field-label">Nome cliente</label>
-      <input type="text" id="new-apt-client" class="field-input" placeholder="es. Marco R.">
-    </div>
-    <div class="field">
-      <label class="field-label">Importo previsto (€) <span style="font-weight:400;color:var(--text3)">(opzionale)</span></label>
-      <input type="number" id="new-apt-amount" class="field-input"
-        placeholder="0,00" step="0.01" min="0" inputmode="decimal">
-    </div>
-    <div class="field">
-      <label class="field-label">Note</label>
-      <input type="text" id="new-apt-notes" class="field-input"
-        placeholder="es. Manica destra, old school">
-    </div>
-    <!-- status non serve per nuovo: default "confermato" in api.js -->
-    <div style="display:flex;gap:.75rem;margin-top:1rem">
-      <button id="btn-submit-new-apt" class="btn btn-primary" style="flex:1"
-        onclick="submitNewApt()">Aggiungi</button>
-      <button class="btn btn-ghost" style="flex:1"
-        onclick="closeNewAptModal()">Annulla</button>
-    </div>
-  </div>
-</div>
 
 <!-- ── MODALE MODIFICA APPUNTAMENTO ── -->
 <div id="edit-apt-modal"
@@ -2106,8 +2065,6 @@ function render() {
     renderProfRicorrenti();
 }
 
-// Alias richiesto da api.js (vecchio nome usato internamente)
-function renderAppuntamenti() { renderApptsSection(); }
 
 /* ─────────────────────────────────────────────
    HOME SECTION — logica completa
@@ -2746,159 +2703,7 @@ function renderDayEvents(d) {
   container.innerHTML = html;
 }
 
-/* ═══════════════════════════════════════════════════════
-   SEZIONE APPUNTAMENTI
-   ═══════════════════════════════════════════════════════ */
 
-/** Render completo della sezione (lista + summary + header). */
-function renderApptsSection() {
-  _updateAptsHeader();
-  _renderAptsSummary();
-  _renderAptsList();
-}
-
-/** Aggiorna etichetta mese nella topbar. */
-function _updateAptsHeader() {
-  const el = document.getElementById('apts-month-label');
-  if (el) el.textContent = `${MONTHS[currentMonth]} ${currentYear}`;
-}
-
-/** Calcola e mostra totale previsto (confermati) e conteggio. */
-function _renderAptsSummary() {
-  const confirmed = (appuntamenti || []).filter(a => a.stato === 'confermato');
-  const total     = confirmed.reduce((s, a) => s + parseFloat(a.importo_previsto || 0), 0);
-  const countEl   = document.getElementById('apts-count');
-  const totalEl   = document.getElementById('apts-total');
-  if (countEl) countEl.textContent = (appuntamenti || []).length;
-  if (totalEl) totalEl.textContent = `€${total.toFixed(2)}`;
-}
-
-/** Disegna la lista di card appuntamenti, ordinata per data. */
-function _renderAptsList() {
-  const list = document.getElementById('apts-list');
-  if (!list) return;
-
-  const sorted = [...(appuntamenti || [])].sort((a, b) =>
-    (a.data_ora || '').localeCompare(b.data_ora || '')
-  );
-
-  if (!sorted.length) {
-    list.innerHTML = '<div class="apts-empty">Nessun appuntamento questo mese 📭</div>';
-    return;
-  }
-
-  const statusLabel = {
-    confermato: 'Confermato', in_attesa: 'In attesa',
-    completato: 'Completato', cancellato: 'Cancellato'
-  };
-
-  list.innerHTML = sorted.map(a => {
-    const dt       = a.data_ora ? new Date(a.data_ora) : null;
-    const localStr = dt
-      ? dt.toLocaleDateString('it-IT', { day:'2-digit', month:'2-digit', timeZone:'Europe/Rome' })
-      : '—';
-    const midnight = dt && dt.getUTCHours() === 0 && dt.getUTCMinutes() === 0;
-    const timeStr  = dt && !midnight
-      ? dt.toLocaleTimeString('it-IT', { hour:'2-digit', minute:'2-digit', timeZone:'Europe/Rome' })
-      : '';
-    const amt      = parseFloat(a.importo_previsto || 0);
-    const amtStr   = amt > 0 ? `€${amt.toFixed(2)}` : '';
-    const canConvert = a.stato !== 'cancellato' && a.stato !== 'completato';
-
-    return `<div class="apt-card" id="apt-card-${a.id}">
-      <div class="apt-card-top">
-        <div class="apt-card-client">${escHtml(a.nome_cliente || 'Cliente')}</div>
-        ${amtStr ? `<div class="apt-card-amount">${amtStr}</div>`
-                 : `<div class="apt-card-amount zero">—</div>`}
-      </div>
-      <div class="apt-card-meta">
-        <span class="apt-card-datetime">${localStr}${timeStr ? ' · ' + timeStr : ''}</span>
-        <span class="apt-status ${a.stato}">${statusLabel[a.stato] || a.stato}</span>
-      </div>
-      ${a.note ? `<div class="apt-card-notes">${escHtml(a.note)}</div>` : ''}
-      <div class="apt-card-actions">
-        ${canConvert
-          ? `<button class="apt-act-btn convert" onclick="aptsRiporta('${a.id}')">✓✓ Entrata</button>`
-          : ''}
-        <button class="apt-act-btn" onclick="openEditAptModal('${a.id}')">✎ Modifica</button>
-        <button class="apt-act-btn danger" onclick="aptsDeleteApt('${a.id}')">🗑 Elimina</button>
-      </div>
-    </div>`;
-  }).join('');
-}
-
-/* ── Navigazione mese ── */
-async function aptsChangeMonth(dir) {
-  await changeMonth(dir);
-  renderApptsSection();
-}
-
-/* ── Riporta come entrata ── */
-async function aptsRiporta(id) {
-  _showTaxModal(id, async (tassata) => {
-    await confirmRiportaEntrata(id, tassata);
-    await loadMonthData();
-    renderApptsSection();
-    renderHomeView();
-    showToast('Entrata registrata ✓');
-  });
-}
-
-/* ── Elimina ── */
-async function aptsDeleteApt(id) {
-  await deleteAppuntamento(id);   // confirm() già in api.js
-  await loadMonthData();
-  renderApptsSection();
-  renderCalendarSection();
-}
-
-/* ═══════════════════════════════════════════════════════
-   MODAL NUOVO APPUNTAMENTO
-   ═══════════════════════════════════════════════════════ */
-
-function openNewAptModal() {
-  // Precompila data con oggi
-  const el = document.getElementById('new-apt-date');
-  if (el && !el.value) {
-    el.value = fmtItDate(dayStr(selectedDay));
-  }
-  document.getElementById('new-apt-modal').style.display = 'flex';
-  setTimeout(() => document.getElementById('new-apt-client')?.focus(), 100);
-}
-
-function closeNewAptModal() {
-  document.getElementById('new-apt-modal').style.display = 'none';
-}
-
-async function submitNewApt() {
-  const dateStr = document.getElementById('new-apt-date').value.trim();
-  const dateIso = parseItDate(dateStr);
-  if (!dateIso) { showToast('Data non valida — usa GG/MM/AAAA'); return; }
-
-  const client = document.getElementById('new-apt-client').value.trim();
-  if (!client)  { showToast('Inserisci il nome del cliente'); return; }
-
-  const timeVal = document.getElementById('new-apt-time').value;
-  const amtRaw  = parseFloat(document.getElementById('new-apt-amount').value) || 0;
-  const notes   = document.getElementById('new-apt-notes').value.trim();
-
-  const btn = document.getElementById('btn-submit-new-apt');
-  btn.disabled = true; btn.textContent = 'Salvataggio…';
-
-  await addAppuntamento(dateIso, timeVal, client, amtRaw, notes);
-
-  btn.disabled = false; btn.textContent = 'Aggiungi';
-
-  // Reset form
-  ['new-apt-date','new-apt-time','new-apt-client','new-apt-amount','new-apt-notes']
-    .forEach(id => { document.getElementById(id).value = ''; });
-
-  closeNewAptModal();
-  showToast('Appuntamento aggiunto ✓');
-  await loadMonthData();
-  renderApptsSection();
-  renderCalendarSection();
-}
 
 /* ═══════════════════════════════════════════════════════
    MODAL MODIFICA APPUNTAMENTO
@@ -2959,7 +2764,6 @@ async function submitEditApt() {
   closeEditAptModal();
   showToast('Appuntamento aggiornato ✓');
   await loadMonthData();
-  renderApptsSection();
   renderCalendarSection();
 }
 
@@ -3538,6 +3342,7 @@ async function _runAfterLogin(user) {
   if (_authBusy) return;
   _authBusy = true;
   currentUser = user;
+  try { localStorage.setItem('ib_uid', user.id); } catch(e) {}
   const _appVisible = () => document.getElementById('screen-app')?.classList.contains('active');
   try {
     const _timeout = new Promise((_, rej) =>
@@ -3643,8 +3448,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     clearTimeout(loadingTimeout);
     _showLoadingError(
       'Serve la connessione internet per aprire InkBooks.<br>' +
-      'Connettiti al Wi-Fi e ricarica il file.<br><br>' +
-      '<small style="opacity:.6">Se il problema persiste verifica che api.js<br>sia nella stessa cartella di app-mobile.html</small>'
+      'Connettiti al Wi-Fi e ricarica la pagina.'
     );
     return;
   }
@@ -3666,15 +3470,17 @@ window.addEventListener('DOMContentLoaded', async () => {
       }
     });
 
-    // getSession() legge subito da localStorage — istantaneo
+    // Render istantaneo da cache PRIMA di qualsiasi chiamata di rete
+    const cachedUid = localStorage.getItem('ib_uid');
+    if (cachedUid) _tryInstantOpen(cachedUid);
+
+    // Verifica sessione (può richiedere rete se il token è scaduto)
     const { data, error } = await sb.auth.getSession();
     if (error) throw error;
     if (data.session?.user) {
-      // Render istantaneo da cache (se disponibile): l'utente vede la home subito
-      _tryInstantOpen(data.session.user.id);
-      // Poi carica dati freschi in background (aggiorna silenziosamente la UI)
       await _runAfterLogin(data.session.user);
     } else {
+      localStorage.removeItem('ib_uid');
       _showAuth();
     }
   } catch (e) {
