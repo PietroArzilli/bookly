@@ -1,4 +1,4 @@
-const CACHE = 'inkbooks-v5';
+const CACHE = 'inkbooks-v6';
 
 const PRECACHE = [
   '/inkbooks/',
@@ -7,7 +7,6 @@ const PRECACHE = [
   'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2'
 ];
 
-// Installa e precacha subito
 self.addEventListener('install', e => {
   self.skipWaiting();
   e.waitUntil(
@@ -21,7 +20,6 @@ self.addEventListener('install', e => {
   );
 });
 
-// Attiva: elimina cache vecchie, prendi controllo di tutti i tab
 self.addEventListener('activate', e => {
   e.waitUntil(
     caches.keys()
@@ -34,10 +32,9 @@ self.addEventListener('fetch', e => {
   if (e.request.method !== 'GET') return;
   const url = new URL(e.request.url);
 
-  // App shell (HTML, manifest, icone): stale-while-revalidate
-  // → serve subito da cache, aggiorna in background per la prossima apertura
+  // App shell: network-first → sempre aggiornato, cache come fallback offline
   if (url.origin === self.location.origin && url.pathname.startsWith('/inkbooks')) {
-    e.respondWith(staleWhileRevalidate(e.request));
+    e.respondWith(networkFirst(e.request));
     return;
   }
 
@@ -48,13 +45,15 @@ self.addEventListener('fetch', e => {
   }
 });
 
-async function staleWhileRevalidate(req) {
+async function networkFirst(req) {
   const cache = await caches.open(CACHE);
-  const cached = await cache.match(req);
-  const netFetch = fetch(req)
-    .then(res => { if (res.ok) cache.put(req, res.clone()); return res; })
-    .catch(() => null);
-  return cached || await netFetch;
+  try {
+    const res = await fetch(req);
+    if (res.ok) cache.put(req, res.clone());
+    return res;
+  } catch {
+    return await cache.match(req);
+  }
 }
 
 async function cacheFirst(req) {
