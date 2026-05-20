@@ -2187,10 +2187,11 @@ function onPaywallNeeded() {
 }
 
 async function onAppReady() {
-  showScreen('app');
+  const alreadyShowing = document.getElementById('screen-app')?.classList.contains('active');
+  if (!alreadyShowing) { showScreen('app'); switchSection('home'); }
   await Promise.all([loadMonthData(), loadRicorrenti()]);
   _saveCache();
-  switchSection('home');
+  if (alreadyShowing) render(); // aggiorna silenziosamente senza cambiare sezione
 }
 
 /* ─────────────────────────────────────────────
@@ -3658,11 +3659,10 @@ async function _runAfterLogin(user) {
   if (_authBusy) return;
   _authBusy = true;
   currentUser = user;
+  const _appVisible = () => document.getElementById('screen-app')?.classList.contains('active');
   try {
-    // Se afterLogin() si blocca (rete lenta, iframe bloccato da file://, ecc.)
-    // il timeout forza l'uscita verso il login entro 8 secondi
     const _timeout = new Promise((_, rej) =>
-      setTimeout(() => rej(new Error('timeout')), 8000)
+      setTimeout(() => rej(new Error('timeout')), 20000)
     );
     await Promise.race([
       afterLogin(onProfileReady, onSetupNeeded, onPaywallNeeded, onAppReady),
@@ -3670,18 +3670,15 @@ async function _runAfterLogin(user) {
     ]);
   } catch (e) {
     if (e.message === 'timeout') {
-      console.warn('[afterLogin] timeout — connessione lenta o bloccata');
-      showToast('Connessione lenta. Riprova.');
+      console.warn('[afterLogin] timeout');
+      // Se l'app è già visibile da cache, lascia stare — l'utente vede i dati cached
+      if (!_appVisible()) { _showAuth(); }
     } else {
       console.error('[afterLogin]', e);
-      showToast('Errore di connessione. Riprova.');
+      if (!_appVisible()) { showToast('Errore di connessione. Riprova.'); _showAuth(); }
     }
-    showScreen('auth');
-    switchAuth('login');
   } finally {
     _authBusy = false;
-    // Fallback: afterLogin() può tornare senza navigare (es. sessione scaduta).
-    // Se siamo ancora sul loading, vai al login.
     const _active = document.querySelector('.screen.active');
     if (_active && _active.id === 'screen-loading') _showAuth();
   }
