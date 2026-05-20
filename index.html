@@ -2300,7 +2300,6 @@ function _confirmTax() {
 async function homeRiporta(id) {
   _showTaxModal(id, async (tassata) => {
     await confirmRiportaEntrata(id, tassata);
-    await loadMonthData();
     renderHomeView();
   });
 }
@@ -2973,7 +2972,6 @@ async function calAddAppuntamento() {
 
   closeAddModal();
   showToast('Appuntamento aggiunto ✓');
-  await loadMonthData();
   renderCalendarSection();
   renderHomeView();
 }
@@ -3057,15 +3055,13 @@ async function calAddExpense() {
 async function calRiporta(id) {
   _showTaxModal(id, async (tassata) => {
     await confirmRiportaEntrata(id, tassata);
-    await loadMonthData();
     renderCalendarSection();
     renderHomeView();
   });
 }
 
 async function calDeleteApt(id) {
-  await deleteAppuntamento(id);   // confirm() già in api.js
-  await loadMonthData();
+  await deleteAppuntamento(id);
   renderCalendarSection();
   renderHomeView();
 }
