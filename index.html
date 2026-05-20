@@ -1736,91 +1736,105 @@ async function deleteEntry(type, id) {
 }
 
 // =====================================================
-// APPUNTAMENTI
+// APPUNTAMENTI — optimistic updates
 // =====================================================
-async function addAppuntamento(dateIso, timeVal, client, amtRaw, notes) {
-  const dataOra = timeVal
-    ? dateIso + 'T' + timeVal + ':00' + getTzOffset()
-    : dateIso + 'T00:00:00Z';
-
-  const { data, error } = await sb.from('appuntamenti').insert({
-    user_id:          currentUser.id,
-    data_ora:         dataOra,
-    nome_cliente:     client,
-    importo_previsto: amtRaw,
-    note:             notes,
-    stato:            'confermato'
-  }).select().single();
-
-  if (!error && data) {
-    const { start, end } = monthRange();
-    const aptLocalDate = data.data_ora ? new Date(data.data_ora).toLocaleDateString('sv') : null;
-    if (aptLocalDate && aptLocalDate >= start && aptLocalDate <= end) appuntamenti.push(data);
-    return data;
-  } else {
-    throw new Error(error?.message || 'Errore Supabase');
-  }
-}
-
-let _delAptCallback = null;
-
-function showDelAptConfirm(onConfirm) {
-  _delAptCallback = onConfirm;
-  document.getElementById('del-apt-overlay').style.display = 'block';
-  document.getElementById('del-apt-sheet').style.display = 'block';
-  document.getElementById('del-apt-confirm-btn').onclick = async () => {
-    hideDelAptConfirm();
-    if (_delAptCallback) await _delAptCallback();
-    _delAptCallback = null;
-  };
-}
 
 function hideDelAptConfirm() {
   document.getElementById('del-apt-overlay').style.display = 'none';
   document.getElementById('del-apt-sheet').style.display = 'none';
 }
 
-async function deleteAppuntamento(id) {
-  if (!currentUser) return false;
-  return new Promise(resolve => {
-    showDelAptConfirm(async () => {
-      const { error } = await sb.from('appuntamenti').delete().eq('id', id).eq('user_id', currentUser.id);
-      if (!error) {
-        appuntamenti = appuntamenti.filter(a => String(a.id) !== String(id));
-        showToast('Appuntamento eliminato');
-        resolve(true);
-      } else {
-        showToast('Errore eliminazione: ' + (error.message || 'Riprovare'));
-        resolve(false);
-      }
-    });
+function showDelAptConfirm(onConfirm) {
+  document.getElementById('del-apt-overlay').style.display = 'block';
+  document.getElementById('del-apt-sheet').style.display = 'block';
+  document.getElementById('del-apt-confirm-btn').onclick = () => {
+    hideDelAptConfirm();
+    onConfirm();
+  };
+}
+
+// Aggiunge ottimisticamente: UI istantanea, sync in background
+function addAppuntamento(dateIso, timeVal, client, amtRaw, notes) {
+  const dataOra = timeVal
+    ? dateIso + 'T' + timeVal + ':00' + getTzOffset()
+    : dateIso + 'T00:00:00Z';
+  const tempId = '_tmp_' + Date.now();
+  const optimistic = { id: tempId, data_ora: dataOra, nome_cliente: client,
+    importo_previsto: amtRaw, note: notes, stato: 'confermato', user_id: currentUser.id };
+
+  const { start, end } = monthRange();
+  const aptDate = new Date(dataOra).toLocaleDateString('sv');
+  if (aptDate >= start && aptDate <= end) appuntamenti.push(optimistic);
+
+  // Sync in background
+  sb.from('appuntamenti').insert({
+    user_id: currentUser.id, data_ora: dataOra, nome_cliente: client,
+    importo_previsto: amtRaw, note: notes, stato: 'confermato'
+  }).select().single().then(({ data, error }) => {
+    if (!error && data) {
+      const idx = appuntamenti.findIndex(a => a.id === tempId);
+      if (idx !== -1) appuntamenti[idx] = data;
+    } else {
+      appuntamenti = appuntamenti.filter(a => a.id !== tempId);
+      showToast('Errore salvataggio: ' + (error?.message || 'Riprova'));
+      renderCalendarSection(); renderHomeView();
+    }
   });
 }
 
-async function confirmRiportaEntrata(id, tassata) {
-  if (!id || !currentUser) return null;
+// Elimina ottimisticamente: sheet → UI istantanea → sync in background
+function deleteAppuntamento(id) {
+  if (!currentUser) return;
+  showDelAptConfirm(() => {
+    const backup = [...appuntamenti];
+    appuntamenti = appuntamenti.filter(a => String(a.id) !== String(id));
+    showToast('Appuntamento eliminato');
+    renderCalendarSection(); renderHomeView();
+
+    sb.from('appuntamenti').delete().eq('id', id).eq('user_id', currentUser.id)
+      .then(({ error }) => {
+        if (error) {
+          appuntamenti = backup;
+          showToast('Errore: ' + (error.message || 'Riprovare'));
+          renderCalendarSection(); renderHomeView();
+        }
+      });
+  });
+}
+
+// Riporta ottimisticamente: UI istantanea → sync in background
+function confirmRiportaEntrata(id, tassata) {
+  if (!id || !currentUser) return;
   const apt = appuntamenti.find(a => String(a.id) === String(id));
-  if (!apt) return null;
+  if (!apt) return;
   const aptDate = apt.data_ora ? new Date(apt.data_ora).toLocaleDateString('sv') : new Date().toLocaleDateString('sv');
   const desc = apt.nome_cliente + (apt.note ? ' — ' + apt.note : '');
   const importo = parseFloat(apt.importo_previsto || 0);
 
-  const { data, error } = await sb.from('entrate').insert({
-    user_id: currentUser.id, importo, descrizione: desc, data: aptDate, tassata
-  }).select().single();
+  // Optimistic: rimuovi appuntamento, aggiungi entrata con ID temp
+  const backupApts = [...appuntamenti];
+  const backupEntr = [...entrate];
+  appuntamenti = appuntamenti.filter(a => String(a.id) !== String(id));
+  const tempId = '_tmp_' + Date.now();
+  const tempEntry = { id: tempId, user_id: currentUser.id, importo, descrizione: desc, data: aptDate, tassata };
+  const { start, end } = monthRange();
+  if (aptDate >= start && aptDate <= end) entrate.push(tempEntry);
+  showToast('Entrata registrata ✓');
 
-  if (!error && data) {
-    const { start, end } = monthRange();
-    if (aptDate >= start && aptDate <= end) entrate.push(data);
-    await sb.from('appuntamenti').delete().eq('id', id).eq('user_id', currentUser.id);
-    appuntamenti = appuntamenti.filter(a => String(a.id) !== String(id));
-    showToast('Entrata aggiunta, appuntamento eliminato');
-    return data;
-  } else {
-    console.error('confirmRiportaEntrata error:', error);
-    showToast('Errore: ' + (error?.message || 'Riprovare'));
-    return null;
-  }
+  // Sync in background
+  sb.from('entrate').insert({ user_id: currentUser.id, importo, descrizione: desc, data: aptDate, tassata })
+    .select().single().then(({ data, error }) => {
+      if (!error && data) {
+        const idx = entrate.findIndex(e => e.id === tempId);
+        if (idx !== -1) entrate[idx] = data;
+        sb.from('appuntamenti').delete().eq('id', id).eq('user_id', currentUser.id);
+      } else {
+        appuntamenti = backupApts;
+        entrate = backupEntr;
+        showToast('Errore: ' + (error?.message || 'Riprovare'));
+        renderHomeView();
+      }
+    });
 }
 
 async function saveEditApt(id, dateIso, timeVal, client, amtRaw, notes, status) {
@@ -2317,13 +2331,9 @@ function _confirmTax() {
 }
 
 /* ── Riporta appuntamento come entrata ── */
-async function homeRiporta(id) {
-  _showTaxModal(id, async (tassata) => {
-    try {
-      await confirmRiportaEntrata(id, tassata);
-    } catch(e) {
-      showToast('Errore: ' + (e.message || 'Riprova'));
-    }
+function homeRiporta(id) {
+  _showTaxModal(id, (tassata) => {
+    confirmRiportaEntrata(id, tassata);
     renderHomeView();
   });
 }
@@ -2953,7 +2963,7 @@ function addModalTab(tab) {
 }
 
 /* ── Aggiungi appuntamento dal calendario ── */
-async function calAddAppuntamento() {
+function calAddAppuntamento() {
   const dateIso = _getIsoFromWheels('add-apt');
   if (!dateIso) { showToast('Seleziona una data'); return; }
 
@@ -2963,20 +2973,6 @@ async function calAddAppuntamento() {
   const timeVal = document.getElementById('add-apt-time').value;
   const amtRaw  = parseFloat(document.getElementById('add-apt-amount').value) || 0;
   const notes   = document.getElementById('add-apt-notes').value.trim();
-
-  const btn = document.getElementById('btn-add-apt-cal');
-  btn.disabled = true;
-  btn.textContent = 'Salvataggio…';
-  try {
-    await addAppuntamento(dateIso, timeVal, client, amtRaw, notes);
-  } catch(e) {
-    showToast('Errore durante il salvataggio, riprova');
-    btn.disabled = false;
-    btn.textContent = 'Aggiungi';
-    return;
-  }
-  btn.disabled = false;
-  btn.textContent = 'Aggiungi';
 
   // Crea reminder collegato se richiesto
   const remChk = document.getElementById('add-apt-reminder-chk');
@@ -2994,6 +2990,7 @@ async function calAddAppuntamento() {
   });
   document.getElementById('add-apt-time').value = '';
 
+  addAppuntamento(dateIso, timeVal, client, amtRaw, notes);
   closeAddModal();
   showToast('Appuntamento aggiunto ✓');
   renderCalendarSection();
@@ -3076,18 +3073,16 @@ async function calAddExpense() {
 
 /* ── Azioni rapide sugli eventi ── */
 
-async function calRiporta(id) {
-  _showTaxModal(id, async (tassata) => {
-    await confirmRiportaEntrata(id, tassata);
+function calRiporta(id) {
+  _showTaxModal(id, (tassata) => {
+    confirmRiportaEntrata(id, tassata);
     renderCalendarSection();
     renderHomeView();
   });
 }
 
-async function calDeleteApt(id) {
-  await deleteAppuntamento(id);
-  renderCalendarSection();
-  renderHomeView();
+function calDeleteApt(id) {
+  deleteAppuntamento(id);
 }
 
 async function calSkipRic(id) {
