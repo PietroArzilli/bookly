@@ -3813,10 +3813,13 @@ window.addEventListener('DOMContentLoaded', async () => {
     history.replaceState({}, '', window.location.pathname);
   }
 
-  // Deregistra qualsiasi SW vecchio ancora attivo
+  // Registra Service Worker per apertura istantanea
   if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.getRegistrations()
-      .then(regs => regs.forEach(r => r.unregister()));
+    navigator.serviceWorker.register('/inkbooks/sw.js');
+    // Quando il SW aggiorna l'app in background, avvisa l'utente
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+      showToast('Aggiornamento disponibile — riaprendo la prossima volta vedrai le novità');
+    });
   }
 });
 </script>
