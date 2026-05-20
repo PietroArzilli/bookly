@@ -191,33 +191,6 @@ body {
 }
 #screen-setup.active { display: flex; }
 
-/* ============================================================
-   SCHERMATA: PAYWALL
-   ============================================================ */
-#screen-paywall {
-  align-items: center;
-  justify-content: center;
-  padding: 2rem 1.5rem;
-  text-align: center;
-}
-#screen-paywall.active { display: flex; }
-
-.paywall-card {
-  background: var(--surface);
-  border-radius: var(--radius);
-  padding: 2.5rem 2rem;
-  width: 100%;
-  max-width: 360px;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.08), 0 8px 24px rgba(0,0,0,0.06);
-}
-.paywall-price {
-  font-size: 2.8rem;
-  font-weight: 700;
-  color: var(--accent);
-  letter-spacing: -0.03em;
-  margin: 1.25rem 0 .25rem;
-}
-.paywall-period { font-size: .8rem; color: var(--text3); margin-bottom: 2rem; }
 
 /* ============================================================
    SCHERMATA: APP PRINCIPALE
@@ -789,29 +762,6 @@ body {
     </div>
   </div>
 
-  <!-- =====================================================
-       SCHERMATA: PAYWALL
-       Mostrata se l'abbonamento non è attivo.
-       ===================================================== -->
-  <div id="screen-paywall" class="screen">
-    <div class="paywall-card">
-      <div class="auth-logo">Ink<em>Books</em></div>
-      <p style="font-size:.85rem;color:var(--text2);margin-top:.5rem;line-height:1.5">
-        Gestisci le tue finanze da tatuatore, ovunque e da qualsiasi dispositivo.
-      </p>
-      <div class="paywall-price">€9,99</div>
-      <div class="paywall-period">all'anno · accesso completo · tutti i dispositivi</div>
-      <button id="btn-checkout" class="btn btn-primary" onclick="goToCheckout()">
-        Abbonati ora →
-      </button>
-      <div style="margin-top:1.25rem;text-align:center">
-        <button onclick="handleLogout()"
-          style="background:none;border:none;cursor:pointer;font-size:.78rem;color:var(--text3)">
-          Esci dall'account
-        </button>
-      </div>
-    </div>
-  </div>
 
   <!-- =====================================================
        SCHERMATA: APP PRINCIPALE
@@ -972,14 +922,6 @@ body {
                 <div style="font-size:.68rem;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:.15rem">Email</div>
                 <div class="prof-email" id="prof-email">—</div>
               </div>
-            </div>
-            <!-- Abbonamento -->
-            <div style="padding:.85rem 1.25rem;display:flex;align-items:center;justify-content:space-between;gap:.75rem">
-              <div>
-                <div style="font-size:.68rem;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:.15rem">Abbonamento</div>
-                <div id="prof-sub-status" style="font-size:.88rem;font-weight:600">—</div>
-              </div>
-              <div id="prof-sub-action"></div>
             </div>
           </div>
 
@@ -1630,7 +1572,7 @@ async function loadProfile() {
 
   const { data: created, error: upsertErr } = await sb.from('profiles')
     .upsert(
-      { id: currentUser.id, percentuale_studio: 30, aliquota_tasse: 5, subscription_active: false, setup_done: false },
+      { id: currentUser.id, percentuale_studio: 30, aliquota_tasse: 5, setup_done: false },
       { onConflict: 'id' }
     )
     .select().single();
@@ -1678,8 +1620,7 @@ async function doSetup(studioPct, taxPct) {
   const err = await updateProfile({
     percentuale_studio: parseFloat(studioPct),
     aliquota_tasse: parseFloat(taxPct),
-    setup_done: true,
-    subscription_active: true
+    setup_done: true
   });
   return err;
 }
@@ -1695,7 +1636,7 @@ async function saveSettings(studioPct, taxPct) {
 // =====================================================
 // FLUSSO POST-LOGIN
 // =====================================================
-async function afterLogin(onProfileReady, onSetupNeeded, onPaywallNeeded, onAppReady) {
+async function afterLogin(onProfileReady, onSetupNeeded, onAppReady) {
   const ok = await loadProfile();
 
   if (!ok) {
@@ -1714,47 +1655,7 @@ async function afterLogin(onProfileReady, onSetupNeeded, onPaywallNeeded, onAppR
     return;
   }
 
-  if (!userProfile?.subscription_active) {
-    if (typeof onPaywallNeeded === 'function') {
-      onPaywallNeeded();
-      if (window.location.search.includes('subscribed=1')) waitForActivation(onAppReady);
-    }
-    return;
-  }
-
   if (typeof onAppReady === 'function') onAppReady();
-}
-
-// =====================================================
-// PAGAMENTO
-// =====================================================
-function goToCheckout() {
-  if (!currentUser) return;
-  const base       = 'https://inkbookss.lemonsqueezy.com/checkout/buy/a88fcb09-4446-4b5b-9ed8-e9d97b82f731';
-  const userId     = encodeURIComponent(currentUser.id);
-  const email      = encodeURIComponent(currentUser.email || '');
-  window.open(`${base}?checkout[custom][user_id]=${userId}&checkout[email]=${email}`, '_blank');
-}
-
-async function waitForActivation(onSuccess) {
-  let attempts = 0;
-  const poll = async () => {
-    attempts++;
-    await loadProfile();
-    if (userProfile?.subscription_active) {
-      history.replaceState({}, '', window.location.pathname);
-      if (typeof onSuccess === 'function') onSuccess();
-      showToast('Abbonamento attivato! Benvenuto.');
-      return;
-    }
-    if (attempts < 10) {
-      setTimeout(poll, 3000);
-    } else {
-      history.replaceState({}, '', window.location.pathname);
-      showToast('Attivazione in corso, ricarica tra qualche secondo.');
-    }
-  };
-  setTimeout(poll, 3000);
 }
 
 // =====================================================
@@ -2182,9 +2083,6 @@ function onSetupNeeded() {
   showScreen('setup');
 }
 
-function onPaywallNeeded() {
-  showScreen('paywall');
-}
 
 async function onAppReady() {
   const alreadyShowing = document.getElementById('screen-app')?.classList.contains('active');
@@ -3336,7 +3234,6 @@ function escHtml(str) {
 
 function renderProfileSection() {
   _renderProfUser();
-  _renderProfSub();
   _renderProfSettings();
   renderProfRicorrenti();
 }
@@ -3350,23 +3247,6 @@ function _renderProfUser() {
   if (avatarEl) avatarEl.textContent = email !== '—' ? email[0].toUpperCase() : '?';
 }
 
-/* ── Stato abbonamento (da userProfile.subscription_active) ── */
-function _renderProfSub() {
-  const statusEl = document.getElementById('prof-sub-status');
-  const actionEl = document.getElementById('prof-sub-action');
-  if (!statusEl) return;
-
-  const active = !!userProfile?.subscription_active;
-  statusEl.textContent = active ? 'Attivo' : 'Non attivo';
-  statusEl.style.color = active ? 'var(--green)' : 'var(--red)';
-
-  if (actionEl) {
-    actionEl.innerHTML = active ? '' :
-      `<button class="btn-sm"
-         style="background:var(--accent);color:#fff;border-radius:var(--radius-xs);padding:.4rem .9rem;font-size:.8rem;font-weight:700;border:none;cursor:pointer"
-         onclick="goToCheckout()">Abbonati →</button>`;
-  }
-}
 
 /* ── Precompila campi impostazioni fiscali ── */
 function _renderProfSettings() {
@@ -3608,9 +3488,8 @@ async function handleSetup() {
   const err = await doSetup(parseFloat(studio), parseFloat(tax));
 
   if (!err) {
-    // doSetup ha salvato setup_done:true e subscription_active:true nel profilo;
     // rieseguiamo il flusso post-login per arrivare all'app
-    await afterLogin(onProfileReady, onSetupNeeded, onPaywallNeeded, onAppReady);
+    await afterLogin(onProfileReady, onSetupNeeded, onAppReady);
   } else {
     showToast('Errore nel salvataggio. Riprova.');
     btn.disabled = false;
@@ -3665,7 +3544,7 @@ async function _runAfterLogin(user) {
       setTimeout(() => rej(new Error('timeout')), 20000)
     );
     await Promise.race([
-      afterLogin(onProfileReady, onSetupNeeded, onPaywallNeeded, onAppReady),
+      afterLogin(onProfileReady, onSetupNeeded, onAppReady),
       _timeout
     ]);
   } catch (e) {
@@ -3711,7 +3590,7 @@ function _saveCache() {
 function _tryInstantOpen(uid) {
   try {
     const prof = JSON.parse(localStorage.getItem(_profKey(uid)) || 'null');
-    if (!prof || !prof.setup_done || !prof.subscription_active) return false;
+    if (!prof || !prof.setup_done) return false;
 
     userProfile  = prof;
     STUDIO_PCT   = (prof.percentuale_studio || 0) / 100;
@@ -3805,10 +3684,6 @@ window.addEventListener('DOMContentLoaded', async () => {
     clearTimeout(loadingTimeout);
   }
 
-  // Ritorno dal checkout Lemon Squeezy (?subscribed=1)
-  if (new URLSearchParams(window.location.search).get('subscribed') === '1') {
-    history.replaceState({}, '', window.location.pathname);
-  }
 
   // Registra Service Worker per apertura istantanea
   if ('serviceWorker' in navigator) {
