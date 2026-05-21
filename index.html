@@ -1753,6 +1753,45 @@ function showDelAptConfirm(onConfirm) {
   };
 }
 
+function hideDelEntryConfirm() {
+  document.getElementById('del-entry-overlay').style.display = 'none';
+  document.getElementById('del-entry-sheet').style.display = 'none';
+}
+
+function showDelEntryConfirm(onConfirm) {
+  document.getElementById('del-entry-overlay').style.display = 'block';
+  document.getElementById('del-entry-sheet').style.display = 'block';
+  document.getElementById('del-entry-confirm-btn').onclick = () => {
+    hideDelEntryConfirm();
+    onConfirm();
+  };
+}
+
+/* Override deleteEntry con ottimistic update + bottom sheet (niente confirm()) */
+function deleteEntry(type, id, onSuccess) {
+  if (!currentUser) return;
+  showDelEntryConfirm(() => {
+    const arr = type === 'income' ? entrate : uscite;
+    const backup = [...arr];
+    if (type === 'income') entrate = entrate.filter(e => String(e.id) !== String(id));
+    else                   uscite  = uscite.filter(u => String(u.id) !== String(id));
+    showToast('Eliminato');
+    renderHomeView();
+    if (typeof onSuccess === 'function') onSuccess();
+
+    const table = type === 'income' ? 'entrate' : 'uscite';
+    sb.from(table).delete().eq('id', id).eq('user_id', currentUser.id)
+      .then(({ error }) => {
+        if (error) {
+          if (type === 'income') entrate = backup;
+          else                   uscite  = backup;
+          showToast('Errore: ' + (error.message || 'Riprovare'));
+          renderHomeView();
+        }
+      });
+  });
+}
+
 // Aggiunge ottimisticamente: UI istantanea, sync in background
 function addAppuntamento(dateIso, timeVal, client, amtRaw, notes) {
   const dataOra = timeVal
@@ -2293,9 +2332,8 @@ async function homeAddEntry(type) {
 }
 
 /* ── Elimina voce ── */
-async function homeDeleteEntry(type, id) {
-  const ok = await deleteEntry(type, id);
-  if (ok !== false) renderHomeView();
+function homeDeleteEntry(type, id) {
+  deleteEntry(type, id);
 }
 
 /* ── Modal tasse ── */
@@ -2561,12 +2599,8 @@ function recapEditEntry(type, id) {
   homeOpenEdit(type, id);
 }
 
-async function recapDeleteEntry(type, id) {
-  const ok = await deleteEntry(type, id);
-  if (ok !== false) {
-    renderHomeView();
-    openRecapModal();
-  }
+function recapDeleteEntry(type, id) {
+  deleteEntry(type, id, () => openRecapModal());
 }
 
 /* ═══════════════════════════════════════════════════════
@@ -3550,7 +3584,11 @@ window.addEventListener('DOMContentLoaded', async () => {
     sb.auth.onAuthStateChange(async (event, session) => {
       try {
         if (event === 'SIGNED_IN' && session?.user) {
-          await _runAfterLogin(session.user);
+          // Se l'app è già visibile, è un refresh del token — non ricaricare i dati
+          const appVisible = document.getElementById('screen-app')?.classList.contains('active');
+          if (!appVisible) await _runAfterLogin(session.user);
+        } else if (event === 'TOKEN_REFRESHED' && session?.user) {
+          currentUser = session.user; // aggiorna il token silenziosamente
         } else if (event === 'SIGNED_OUT') {
           _authBusy = false;
           currentUser = null;
@@ -3597,6 +3635,15 @@ window.addEventListener('DOMContentLoaded', async () => {
   <div style="font-size:.875rem;color:var(--text2);margin-bottom:1.25rem">L'operazione non è reversibile.</div>
   <button id="del-apt-confirm-btn" style="width:100%;padding:.85rem;background:var(--red);color:#fff;border:none;border-radius:var(--radius-sm);font-size:.95rem;font-weight:700;font-family:inherit;cursor:pointer;margin-bottom:.6rem">Elimina</button>
   <button onclick="hideDelAptConfirm()" style="width:100%;padding:.85rem;background:var(--bg2);color:var(--text1);border:none;border-radius:var(--radius-sm);font-size:.95rem;font-weight:600;font-family:inherit;cursor:pointer">Annulla</button>
+</div>
+
+<!-- Delete entry/uscita confirm sheet -->
+<div id="del-entry-overlay" onclick="hideDelEntryConfirm()" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:9998"></div>
+<div id="del-entry-sheet" style="display:none;position:fixed;bottom:0;left:0;right:0;background:#fff;border-radius:20px 20px 0 0;padding:1.5rem 1.25rem calc(1.5rem + env(safe-area-inset-bottom));z-index:9999">
+  <div style="font-size:1rem;font-weight:700;margin-bottom:.35rem">Eliminare voce?</div>
+  <div style="font-size:.875rem;color:var(--text2);margin-bottom:1.25rem">L'operazione non è reversibile.</div>
+  <button id="del-entry-confirm-btn" style="width:100%;padding:.85rem;background:var(--red);color:#fff;border:none;border-radius:var(--radius-sm);font-size:.95rem;font-weight:700;font-family:inherit;cursor:pointer;margin-bottom:.6rem">Elimina</button>
+  <button onclick="hideDelEntryConfirm()" style="width:100%;padding:.85rem;background:var(--bg2);color:var(--text1);border:none;border-radius:var(--radius-sm);font-size:.95rem;font-weight:600;font-family:inherit;cursor:pointer">Annulla</button>
 </div>
 
 <!-- Logout confirm sheet (root level per evitare problemi fixed su iOS) -->
