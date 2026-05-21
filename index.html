@@ -3131,9 +3131,8 @@ function calDeleteApt(id) {
   deleteAppuntamento(id);
 }
 
-async function calSkipRic(id) {
-  await skipRicorrente(id);
-  renderCalendarSection();
+function calSkipRic(id) {
+  skipRic(id);
 }
 
 function calToggleReminder(id) {
@@ -3253,7 +3252,7 @@ function renderProfRicorrenti() {
 
     const skipBtn = attiva
       ? `<button class="apt-act-btn" onclick="skipRic('${r.id}')">⏭ Salta mese</button>`
-      : `<button class="apt-act-btn" style="opacity:.4;cursor:not-allowed" disabled>⏭ Saltata</button>`;
+      : `<button class="apt-act-btn" style="background:var(--amber-light);color:var(--amber);border-color:var(--amber)" onclick="skipRic('${r.id}')">↩ Riapplica</button>`;
 
     return `
     <div class="apt-card">
@@ -3383,17 +3382,64 @@ function deleteRic(id) {
   });
 }
 
-/* ── Salta questo mese ── */
-async function skipRic(id) {
-  await skipRicorrente(id);
-  await loadRicorrenti();
-  renderProfRicorrenti();
-  // Aggiorna sezioni che mostrano ricorrenti
-  if (document.getElementById('section-calendar')?.classList.contains('active'))
-    renderCalendarSection();
-  if (document.getElementById('section-home')?.classList.contains('active'))
-    renderHomeSummary();
-  showToast('Saltata per questo mese ⏭');
+/* ── Salta/Riapplica mese (toggle ottimistico) ── */
+function skipRic(id) {
+  if (!currentUser) return;
+  const isSkipped = eccezioniRicorrenti.some(
+    e => String(e.spesa_id) === String(id) && e.anno === currentYear && e.mese === currentMonth + 1
+  );
+
+  function _refreshViews() {
+    renderProfRicorrenti();
+    if (document.getElementById('section-calendar')?.classList.contains('active'))
+      renderCalendarSection();
+    if (document.getElementById('section-home')?.classList.contains('active'))
+      renderHomeSummary();
+  }
+
+  if (isSkipped) {
+    const exc = eccezioniRicorrenti.find(
+      e => String(e.spesa_id) === String(id) && e.anno === currentYear && e.mese === currentMonth + 1
+    );
+    eccezioniRicorrenti = eccezioniRicorrenti.filter(
+      e => !(String(e.spesa_id) === String(id) && e.anno === currentYear && e.mese === currentMonth + 1)
+    );
+    _refreshViews();
+    showToast('Spesa riapplicata ↩');
+    sb.from('spese_ricorrenti_eccezioni')
+      .delete()
+      .eq('user_id', currentUser.id)
+      .eq('spesa_id', id)
+      .eq('anno', currentYear)
+      .eq('mese', currentMonth + 1)
+      .then(({ error }) => {
+        if (error) {
+          if (exc) eccezioniRicorrenti.push(exc);
+          _refreshViews();
+          showToast('Errore: ' + (error.message || 'Riprovare'));
+        } else {
+          _saveCache();
+        }
+      });
+  } else {
+    const tmpExc = { spesa_id: id, anno: currentYear, mese: currentMonth + 1 };
+    eccezioniRicorrenti.push(tmpExc);
+    _refreshViews();
+    showToast('Saltata per questo mese ⏭');
+    sb.from('spese_ricorrenti_eccezioni')
+      .insert({ user_id: currentUser.id, spesa_id: id, anno: currentYear, mese: currentMonth + 1 })
+      .then(({ error }) => {
+        if (error) {
+          eccezioniRicorrenti = eccezioniRicorrenti.filter(
+            e => !(String(e.spesa_id) === String(id) && e.anno === currentYear && e.mese === currentMonth + 1)
+          );
+          _refreshViews();
+          showToast('Errore: ' + (error.message || 'Riprovare'));
+        } else {
+          _saveCache();
+        }
+      });
+  }
 }
 
 /* ─────────────────────────────────────────────
