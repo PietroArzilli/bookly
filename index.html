@@ -1774,20 +1774,21 @@ function showDelEntryConfirm(onConfirm) {
 function deleteEntry(type, id, onSuccess) {
   if (!currentUser) return;
   showDelEntryConfirm(() => {
-    const arr = type === 'income' ? entrate : uscite;
-    const backup = [...arr];
-    if (type === 'income') entrate = entrate.filter(e => String(e.id) !== String(id));
-    else                   uscite  = uscite.filter(u => String(u.id) !== String(id));
+    const isIncome = type === 'income';
+    const item = (isIncome ? entrate : uscite).find(e => String(e.id) === String(id));
+    if (isIncome) entrate = entrate.filter(e => String(e.id) !== String(id));
+    else          uscite  = uscite.filter(u => String(u.id) !== String(id));
     showToast('Eliminato');
     renderHomeView();
     if (typeof onSuccess === 'function') onSuccess();
 
-    const table = type === 'income' ? 'entrate' : 'uscite';
+    const table = isIncome ? 'entrate' : 'uscite';
     sb.from(table).delete().eq('id', id).eq('user_id', currentUser.id)
       .then(({ error }) => {
-        if (error) {
-          if (type === 'income') entrate = backup;
-          else                   uscite  = backup;
+        if (error && item) {
+          // Rollback chirurgico: rimetti solo QUESTO elemento
+          if (isIncome) { if (!entrate.find(e => String(e.id) === String(id))) entrate.push(item); }
+          else          { if (!uscite.find(u => String(u.id) === String(id)))  uscite.push(item);  }
           showToast('Errore: ' + (error.message || 'Riprovare'));
           renderHomeView();
         }
@@ -1828,15 +1829,18 @@ function addAppuntamento(dateIso, timeVal, client, amtRaw, notes) {
 function deleteAppuntamento(id) {
   if (!currentUser) return;
   showDelAptConfirm(() => {
-    const backup = [...appuntamenti];
+    const apt = appuntamenti.find(a => String(a.id) === String(id));
     appuntamenti = appuntamenti.filter(a => String(a.id) !== String(id));
     showToast('Appuntamento eliminato');
     renderCalendarSection(); renderHomeView();
 
     sb.from('appuntamenti').delete().eq('id', id).eq('user_id', currentUser.id)
       .then(({ error }) => {
-        if (error) {
-          appuntamenti = backup;
+        if (error && apt) {
+          if (!appuntamenti.find(a => String(a.id) === String(id))) {
+            appuntamenti.push(apt);
+            appuntamenti.sort((a, b) => (a.data_ora || '').localeCompare(b.data_ora || ''));
+          }
           showToast('Errore: ' + (error.message || 'Riprovare'));
           renderCalendarSection(); renderHomeView();
         }
@@ -1853,9 +1857,7 @@ function confirmRiportaEntrata(id, tassata) {
   const desc = apt.nome_cliente + (apt.note ? ' — ' + apt.note : '');
   const importo = parseFloat(apt.importo_previsto || 0);
 
-  // Optimistic: rimuovi appuntamento, aggiungi entrata con ID temp
-  const backupApts = [...appuntamenti];
-  const backupEntr = [...entrate];
+  // Optimistic: rimuovi SOLO questo appuntamento, aggiungi entrata con ID temp
   appuntamenti = appuntamenti.filter(a => String(a.id) !== String(id));
   const tempId = '_tmp_' + Date.now();
   const tempEntry = { id: tempId, user_id: currentUser.id, importo, descrizione: desc, data: aptDate, tassata };
@@ -1871,10 +1873,14 @@ function confirmRiportaEntrata(id, tassata) {
         if (idx !== -1) entrate[idx] = data;
         sb.from('appuntamenti').delete().eq('id', id).eq('user_id', currentUser.id);
       } else {
-        appuntamenti = backupApts;
-        entrate = backupEntr;
+        // Rollback chirurgico: rimetti solo QUESTO appuntamento, rimuovi solo la temp entry
+        if (!appuntamenti.find(a => String(a.id) === String(id))) {
+          appuntamenti.push(apt);
+          appuntamenti.sort((a, b) => (a.data_ora || '').localeCompare(b.data_ora || ''));
+        }
+        entrate = entrate.filter(e => e.id !== tempId);
         showToast('Errore: ' + (error?.message || 'Riprovare'));
-        renderHomeView();
+        renderHomeView(); renderCalendarSection();
       }
     });
 }
