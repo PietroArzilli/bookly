@@ -839,8 +839,11 @@ body {
             </div>
           </div>
 
-          <!-- ② APPUNTAMENTO DI OGGI -->
-          <div class="sec-label" style="margin-top:.25rem">Appuntamento oggi</div>
+          <!-- ② APPUNTAMENTI DI OGGI -->
+          <button class="sec-label" style="margin-top:.25rem;cursor:pointer;background:none;border:none;padding:0;font-family:inherit;width:100%;text-align:left" onclick="switchSection('calendar')">
+            <span>Appuntamenti oggi</span>
+            <span>›</span>
+          </button>
           <div class="card" id="home-apt-card">
             <div class="apt-today-empty">Caricamento…</div>
           </div>
@@ -2186,18 +2189,17 @@ function renderHomeDateHeader() {
   if (dayLbl)  dayLbl.textContent  = `${selectedDay}/${currentMonth+1}/${currentYear}`;
 }
 
-/** Mostra il prossimo appuntamento di oggi (selectedDay). */
+/** Mostra tutti gli appuntamenti di oggi (selectedDay). */
 function renderHomeApt() {
   const card = document.getElementById('home-apt-card');
   if (!card) return;
 
   const todayStr = dayStr(selectedDay);
+  const statusMap = { confermato:'Confermato', in_attesa:'In attesa', completato:'Completato' };
 
-  // Filtra appuntamenti di oggi non cancellati, ordina per orario
   const todayApts = (appuntamenti || [])
     .filter(a => {
       if (!a.data_ora || a.stato === 'cancellato') return false;
-      // Confronta la data locale con il giorno selezionato
       const local = new Date(a.data_ora).toLocaleDateString('sv', { timeZone: 'Europe/Rome' });
       return local === todayStr;
     })
@@ -2208,19 +2210,16 @@ function renderHomeApt() {
     return;
   }
 
-  const a   = todayApts[0]; // prossimo
-  const dt  = new Date(a.data_ora);
-  const hasTime = dt.getUTCHours() !== 0 || dt.getUTCMinutes() !== 0;
-  const timeStr = hasTime
-    ? dt.toLocaleTimeString('it-IT', { hour:'2-digit', minute:'2-digit', timeZone:'Europe/Rome' })
-    : '';
-  const amt  = parseFloat(a.importo_previsto || 0);
-  const amtStr = amt > 0 ? `€${amt.toFixed(2)}` : '';
-  const statusMap = { confermato:'Confermato', in_attesa:'In attesa', completato:'Completato' };
-  const statusLabel = statusMap[a.stato] || a.stato;
-
-  card.innerHTML = `
-    <div class="apt-today-inner">
+  card.innerHTML = todayApts.map((a, i) => {
+    const dt = new Date(a.data_ora);
+    const hasTime = dt.getUTCHours() !== 0 || dt.getUTCMinutes() !== 0;
+    const timeStr = hasTime
+      ? dt.toLocaleTimeString('it-IT', { hour:'2-digit', minute:'2-digit', timeZone:'Europe/Rome' })
+      : '';
+    const amt = parseFloat(a.importo_previsto || 0);
+    const amtStr = amt > 0 ? `€${amt.toFixed(2)}` : '';
+    const statusLabel = statusMap[a.stato] || a.stato;
+    return `<div class="apt-today-inner"${i > 0 ? ' style="border-top:1px solid var(--border)"' : ''}>
       <div class="apt-today-client">${escHtml(a.nome_cliente || 'Cliente')}</div>
       <div class="apt-today-meta">
         ${timeStr ? `<span>🕐 ${timeStr}</span>` : ''}
@@ -2228,12 +2227,10 @@ function renderHomeApt() {
         ${a.note  ? `<span>📝 ${escHtml(a.note)}</span>` : ''}
         <span class="status-pill ${a.stato}">${statusLabel}</span>
       </div>
-      ${todayApts.length > 1
-        ? `<div style="font-size:.72rem;color:var(--text3);margin-top:.4rem">+${todayApts.length-1} altro/i oggi</div>`
-        : ''}
       <button class="btn btn-sm" style="margin-top:.85rem;background:var(--green-light);color:var(--green);font-size:.8rem"
         onclick="homeRiporta('${a.id}')">✓✓ Riporta come entrata</button>
     </div>`;
+  }).join('');
 }
 
 /** Promemoria di oggi nella home. */
