@@ -4,12 +4,12 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>Bookly</title>
-<link rel="manifest" href="/inkbooks/manifest.json">
+<link rel="manifest" href="/manifest.json">
 <meta name="theme-color" content="#0D4D5C">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Bookly">
-<link rel="apple-touch-icon" href="/inkbooks/icon.png">
+<link rel="apple-touch-icon" href="/icon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Nunito+Sans:wght@800&display=swap" rel="stylesheet">
 <style>
@@ -633,7 +633,7 @@ body {
        ===================================================== -->
   <div id="screen-loading" class="screen active">
     <div style="text-align:center">
-      <img src="/inkbooks/icon.png" style="width:80px;height:80px;margin-bottom:.75rem;border-radius:18px">
+      <img src="/icon.png" style="width:80px;height:80px;margin-bottom:.75rem;border-radius:18px">
       <div class="bly" style="font-size:2.6rem;margin-bottom:.25rem"><span class="bly-book">book</span><span class="bly-ly">ly</span></div>
       <div class="loading-spinner"></div>
     </div>
@@ -3694,7 +3694,7 @@ window.addEventListener('DOMContentLoaded', async () => {
 
   // Registra Service Worker per apertura istantanea
   if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('/inkbooks/sw.js', { updateViaCache: 'none' });
+    navigator.serviceWorker.register('/sw.js', { updateViaCache: 'none' });
   }
 });
 </script>

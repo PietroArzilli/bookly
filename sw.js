@@ -1,9 +1,9 @@
-const CACHE = 'inkbooks-v6';
+const CACHE = 'inkbooks-v7';
 
 const PRECACHE = [
-  '/inkbooks/',
-  '/inkbooks/manifest.json',
-  '/inkbooks/icon.svg',
+  '/',
+  '/manifest.json',
+  '/icon.svg',
   'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2'
 ];
 
@@ -33,7 +33,7 @@ self.addEventListener('fetch', e => {
   const url = new URL(e.request.url);
 
   // App shell: network-first → sempre aggiornato, cache come fallback offline
-  if (url.origin === self.location.origin && url.pathname.startsWith('/inkbooks')) {
+  if (url.origin === self.location.origin) {
     e.respondWith(networkFirst(e.request));
     return;
   }
