@@ -1791,6 +1791,8 @@ function deleteEntry(type, id, onSuccess) {
           else          { if (!uscite.find(u => String(u.id) === String(id)))  uscite.push(item);  }
           showToast('Errore: ' + (error.message || 'Riprovare'));
           renderHomeView();
+        } else {
+          _saveCache();
         }
       });
   });
@@ -1843,6 +1845,8 @@ function deleteAppuntamento(id) {
           }
           showToast('Errore: ' + (error.message || 'Riprovare'));
           renderCalendarSection(); renderHomeView();
+        } else {
+          _saveCache();
         }
       });
   });
@@ -1865,13 +1869,18 @@ function confirmRiportaEntrata(id, tassata) {
   if (aptDate >= start && aptDate <= end) entrate.push(tempEntry);
   showToast('Entrata registrata ✓');
 
-  // Sync in background
+  // Sync in background: inserisci entrata, poi elimina appuntamento
   sb.from('entrate').insert({ user_id: currentUser.id, importo, descrizione: desc, data: aptDate, tassata })
     .select().single().then(({ data, error }) => {
       if (!error && data) {
         const idx = entrate.findIndex(e => e.id === tempId);
         if (idx !== -1) entrate[idx] = data;
-        sb.from('appuntamenti').delete().eq('id', id).eq('user_id', currentUser.id);
+        // Elimina appuntamento da Supabase, poi aggiorna cache e ri-renderizza con ids reali
+        sb.from('appuntamenti').delete().eq('id', id).eq('user_id', currentUser.id)
+          .then(() => {
+            _saveCache();
+            renderHomeView(); renderCalendarSection();
+          });
       } else {
         // Rollback chirurgico: rimetti solo QUESTO appuntamento, rimuovi solo la temp entry
         if (!appuntamenti.find(a => String(a.id) === String(id))) {
@@ -3350,15 +3359,28 @@ async function submitEditRic() {
 }
 
 /* ── Elimina ── */
-async function deleteRic(id) {
-  await deleteRicorrente(id);   // confirm() già in api.js
-  await loadRicorrenti();
-  renderProfRicorrenti();
-  if (document.getElementById('section-calendar')?.classList.contains('active'))
-    renderCalendarSection();
-  if (document.getElementById('section-home')?.classList.contains('active'))
-    renderHomeSummary();
-  showToast('Spesa ricorrente eliminata');
+function deleteRic(id) {
+  showDelEntryConfirm(() => {
+    const r = speseRicorrenti.find(x => String(x.id) === String(id));
+    speseRicorrenti = speseRicorrenti.filter(x => String(x.id) !== String(id));
+    eccezioniRicorrenti = eccezioniRicorrenti.filter(e => String(e.spesa_id) !== String(id));
+    renderProfRicorrenti();
+    showToast('Spesa ricorrente eliminata');
+
+    sb.from('spese_ricorrenti').delete().eq('id', id).eq('user_id', currentUser.id)
+      .then(({ error }) => {
+        if (error) {
+          if (r) speseRicorrenti.push(r);
+          renderProfRicorrenti();
+          showToast('Errore eliminazione.');
+        } else {
+          if (document.getElementById('section-calendar')?.classList.contains('active'))
+            renderCalendarSection();
+          if (document.getElementById('section-home')?.classList.contains('active'))
+            renderHomeSummary();
+        }
+      });
+  });
 }
 
 /* ── Salta questo mese ── */
@@ -3637,7 +3659,7 @@ window.addEventListener('DOMContentLoaded', async () => {
   <div style="font-size:1rem;font-weight:700;margin-bottom:.35rem">Eliminare appuntamento?</div>
   <div style="font-size:.875rem;color:var(--text2);margin-bottom:1.25rem">L'operazione non è reversibile.</div>
   <button id="del-apt-confirm-btn" style="width:100%;padding:.85rem;background:var(--red);color:#fff;border:none;border-radius:var(--radius-sm);font-size:.95rem;font-weight:700;font-family:inherit;cursor:pointer;margin-bottom:.6rem">Elimina</button>
-  <button onclick="hideDelAptConfirm()" style="width:100%;padding:.85rem;background:var(--bg2);color:var(--text1);border:none;border-radius:var(--radius-sm);font-size:.95rem;font-weight:600;font-family:inherit;cursor:pointer">Annulla</button>
+  <button onclick="hideDelAptConfirm()" style="width:100%;padding:.85rem;background:var(--surface2);color:var(--text);border:none;border-radius:var(--radius-sm);font-size:.95rem;font-weight:600;font-family:inherit;cursor:pointer">Annulla</button>
 </div>
 
 <!-- Delete entry/uscita confirm sheet -->
@@ -3646,7 +3668,7 @@ window.addEventListener('DOMContentLoaded', async () => {
   <div style="font-size:1rem;font-weight:700;margin-bottom:.35rem">Eliminare voce?</div>
   <div style="font-size:.875rem;color:var(--text2);margin-bottom:1.25rem">L'operazione non è reversibile.</div>
   <button id="del-entry-confirm-btn" style="width:100%;padding:.85rem;background:var(--red);color:#fff;border:none;border-radius:var(--radius-sm);font-size:.95rem;font-weight:700;font-family:inherit;cursor:pointer;margin-bottom:.6rem">Elimina</button>
-  <button onclick="hideDelEntryConfirm()" style="width:100%;padding:.85rem;background:var(--bg2);color:var(--text1);border:none;border-radius:var(--radius-sm);font-size:.95rem;font-weight:600;font-family:inherit;cursor:pointer">Annulla</button>
+  <button onclick="hideDelEntryConfirm()" style="width:100%;padding:.85rem;background:var(--surface2);color:var(--text);border:none;border-radius:var(--radius-sm);font-size:.95rem;font-weight:600;font-family:inherit;cursor:pointer">Annulla</button>
 </div>
 
 <!-- Logout confirm sheet (root level per evitare problemi fixed su iOS) -->
@@ -3655,7 +3677,7 @@ window.addEventListener('DOMContentLoaded', async () => {
   <div style="font-size:1rem;font-weight:700;margin-bottom:.35rem">Esci dall'account?</div>
   <div style="font-size:.875rem;color:var(--text2);margin-bottom:1.25rem">Dovrai fare di nuovo il login la prossima volta.</div>
   <button onclick="doLogout()" style="width:100%;padding:.85rem;background:var(--red);color:#fff;border:none;border-radius:var(--radius-sm);font-size:.95rem;font-weight:700;font-family:inherit;cursor:pointer;margin-bottom:.6rem">Esci</button>
-  <button onclick="hideLogoutConfirm()" style="width:100%;padding:.85rem;background:var(--bg2);color:var(--text1);border:none;border-radius:var(--radius-sm);font-size:.95rem;font-weight:600;font-family:inherit;cursor:pointer">Annulla</button>
+  <button onclick="hideLogoutConfirm()" style="width:100%;padding:.85rem;background:var(--surface2);color:var(--text);border:none;border-radius:var(--radius-sm);font-size:.95rem;font-weight:600;font-family:inherit;cursor:pointer">Annulla</button>
 </div>
 </body>
 </html>
