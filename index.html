@@ -194,6 +194,55 @@ body {
 }
 
 /* ============================================================
+   SCHERMATA: INSTALL ONBOARDING
+   ============================================================ */
+#screen-install {
+  overflow-y: auto;
+  align-items: flex-start;
+  justify-content: center;
+}
+#screen-install.active { display: flex; }
+.install-inner {
+  padding: 2.5rem 1.25rem calc(2.5rem + env(safe-area-inset-bottom));
+  width: 100%;
+  max-width: 420px;
+}
+.install-step {
+  background: var(--surface);
+  border-radius: 16px;
+  padding: 1rem 1.1rem;
+  margin-bottom: .65rem;
+  display: flex;
+  align-items: flex-start;
+  gap: .9rem;
+  box-shadow: 0 1px 4px rgba(0,0,0,.06);
+}
+.install-step-num {
+  width: 28px; height: 28px;
+  border-radius: 50%;
+  background: var(--accent);
+  color: #fff;
+  font-weight: 700;
+  font-size: .8rem;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+.install-step-body { flex: 1; padding-top: 3px; }
+.install-step-title { font-weight: 600; font-size: .9rem; margin-bottom: .15rem; }
+.install-step-desc  { font-size: .8rem; color: var(--text2); line-height: 1.5; }
+.install-step-desc strong { color: var(--accent); }
+.install-tip {
+  background: var(--coral-light);
+  border-left: 3px solid var(--coral);
+  border-radius: 8px;
+  padding: .7rem .9rem;
+  font-size: .8rem;
+  color: var(--text2);
+  margin-top: 1rem;
+  line-height: 1.5;
+}
+
+/* ============================================================
    SCHERMATA: SETUP
    ============================================================ */
 #screen-setup {
@@ -746,6 +795,74 @@ body {
       </button>
     </div>
   </div><!-- /screen-auth -->
+
+  <!-- =====================================================
+       SCHERMATA: INSTALLA (onboarding PWA)
+       Mostrata ai nuovi utenti mobile non in standalone.
+       ===================================================== -->
+  <div id="screen-install" class="screen">
+    <div class="install-inner">
+
+      <!-- Logo -->
+      <div style="display:flex;align-items:center;gap:.85rem;margin-bottom:2rem">
+        <img src="/icon.png" style="width:52px;height:52px;border-radius:13px">
+        <div class="bly" style="font-size:1.8rem"><span class="bly-book">book</span><span class="bly-ly">ly</span></div>
+      </div>
+
+      <div style="font-size:1.25rem;font-weight:700;margin-bottom:.35rem">Installa l'app</div>
+      <div style="font-size:.875rem;color:var(--text2);margin-bottom:1.75rem;line-height:1.55">
+        Aggiungi Bookly alla schermata Home per usarla come un'app nativa — nessun App Store, gratis.
+      </div>
+
+      <!-- iOS instructions -->
+      <div id="install-ios-steps">
+        <div class="install-step">
+          <div class="install-step-num">1</div>
+          <div class="install-step-body">
+            <div class="install-step-title">Apri in Safari</div>
+            <div class="install-step-desc">Assicurati di usare Safari (non Chrome) — solo Safari supporta l'installazione.</div>
+          </div>
+        </div>
+        <div class="install-step">
+          <div class="install-step-num">2</div>
+          <div class="install-step-body">
+            <div class="install-step-title">Tocca
+              <svg style="display:inline-block;vertical-align:middle;margin:0 2px" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#0D4D5C" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>
+              Condividi
+            </div>
+            <div class="install-step-desc">Icona <strong>Condividi</strong> al centro in basso nella barra di Safari.</div>
+          </div>
+        </div>
+        <div class="install-step">
+          <div class="install-step-num">3</div>
+          <div class="install-step-body">
+            <div class="install-step-title">Aggiungi alla schermata Home</div>
+            <div class="install-step-desc">Scorri il menu e tocca <strong>Aggiungi alla schermata Home</strong>, poi <strong>Aggiungi</strong> in alto a destra.</div>
+          </div>
+        </div>
+        <div class="install-tip">
+          Dopo l'installazione trovi l'icona di Bookly nella Home come qualsiasi altra app.
+        </div>
+      </div>
+
+      <!-- Android: pulsante install nativo -->
+      <div id="install-android-steps" style="display:none">
+        <button id="btn-android-install" class="btn btn-primary" style="margin-bottom:.75rem" onclick="doAndroidInstall()">
+          Installa Bookly
+        </button>
+        <div class="install-tip">
+          Il tuo browser ti chiederà conferma. L'app si aggiunge alla schermata Home in un secondo.
+        </div>
+      </div>
+
+      <!-- Skip -->
+      <button onclick="skipInstall()"
+        style="display:block;width:100%;margin-top:1.5rem;padding:.85rem;background:none;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:.875rem;font-weight:600;font-family:inherit;color:var(--text2);cursor:pointer">
+        Continua senza installare
+      </button>
+
+    </div>
+  </div>
 
   <!-- =====================================================
        SCHERMATA: SETUP
@@ -3566,8 +3683,48 @@ async function _runAfterLogin(user) {
 }
 
 function _showAuth() {
+  const isStandalone = window.matchMedia('(display-mode: standalone)').matches || !!navigator.standalone;
+  const isMobile     = /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+  const seenInstall  = localStorage.getItem('ib_seen_install');
+  if (isMobile && !isStandalone && !seenInstall) {
+    _showInstallScreen();
+    return;
+  }
   showScreen('auth');
   switchAuth('login');
+}
+
+let _deferredInstallPrompt = null;
+
+window.addEventListener('beforeinstallprompt', e => {
+  e.preventDefault();
+  _deferredInstallPrompt = e;
+});
+
+function _showInstallScreen() {
+  const isIOS     = /iPhone|iPad|iPod/i.test(navigator.userAgent);
+  const hasPrompt = !!_deferredInstallPrompt;
+  document.getElementById('install-ios-steps').style.display     = (isIOS || !hasPrompt) ? '' : 'none';
+  document.getElementById('install-android-steps').style.display = (!isIOS && hasPrompt)  ? '' : 'none';
+  showScreen('install');
+}
+
+function skipInstall() {
+  localStorage.setItem('ib_seen_install', '1');
+  showScreen('auth');
+  switchAuth('login');
+}
+
+async function doAndroidInstall() {
+  if (!_deferredInstallPrompt) return;
+  _deferredInstallPrompt.prompt();
+  const { outcome } = await _deferredInstallPrompt.userChoice;
+  _deferredInstallPrompt = null;
+  if (outcome === 'accepted') {
+    localStorage.setItem('ib_seen_install', '1');
+    showScreen('auth');
+    switchAuth('login');
+  }
 }
 
 /* ─── Cache localStorage: render istantaneo al riavvio ─── */
