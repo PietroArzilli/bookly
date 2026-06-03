@@ -1,4 +1,4 @@
-const CACHE = 'inkbooks-v12';
+const CACHE = 'inkbooks-v13';
 
 const PRECACHE = [
   '/',

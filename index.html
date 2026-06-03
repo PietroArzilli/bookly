@@ -40,6 +40,8 @@
   --red-light:   rgba(255,59,48,0.12);
   --amber:       #ff9500;
   --amber-light: rgba(255,149,0,0.12);
+  --purple:       #5856d6;
+  --purple-light: rgba(88,86,214,0.12);
 
   /* Bordi e raggi */
   --border:     rgba(0,0,0,0.08);
@@ -567,6 +569,7 @@ body {
 .cal-ev-chip.income   { background:var(--green-light); color:var(--green); }
 .cal-ev-chip.expense  { background:var(--red-light);   color:var(--red); }
 .cal-ev-chip.reminder { background:var(--accent-light);color:var(--accent); }
+.cal-ev-chip.altro   { background:var(--purple-light); color:var(--purple); }
 /* Pallini per eventi aggiuntivi */
 .cal-dots-row { display:flex; gap:2px; justify-content:center; margin-top:3px; }
 .cal-tiny-dot { width:4px; height:4px; border-radius:50%; flex-shrink:0; }
@@ -574,6 +577,7 @@ body {
 .cal-tiny-dot.income   { background:var(--green); }
 .cal-tiny-dot.expense  { background:var(--red); }
 .cal-tiny-dot.reminder { background:var(--accent); }
+.cal-tiny-dot.altro   { background:var(--purple); }
 
 /* ── CALENDARIO: eventi del giorno ── */
 .day-events-bar { display:flex; align-items:center; justify-content:space-between; padding:.65rem 1rem .35rem; }
@@ -1174,6 +1178,8 @@ body {
         onclick="addModalTab('expense')">🔴 Uscita</button>
       <button class="modal-seg-btn" id="add-tab-rem"
         onclick="addModalTab('reminder')">📌 Reminder</button>
+      <button class="modal-seg-btn" id="add-tab-alt"
+        onclick="addModalTab('altro')">📎 Altro</button>
     </div>
 
     <!-- ── FORM APPUNTAMENTO ── -->
@@ -1304,6 +1310,41 @@ body {
       <div style="display:flex;gap:.75rem;margin-top:1rem">
         <button id="btn-add-exp-cal" class="btn btn-primary" style="flex:1"
           onclick="calAddExpense()">Aggiungi</button>
+        <button class="btn btn-ghost" style="flex:1"
+          onclick="closeAddModal()">Annulla</button>
+      </div>
+    </div>
+
+    <!-- ── FORM ALTRO ── -->
+    <div id="add-form-alt" style="display:none">
+      <div class="field">
+        <label class="field-label">Titolo</label>
+        <input type="text" id="add-alt-title" class="field-input" placeholder="es. Fiera, Viaggio, Chiusura">
+      </div>
+      <div class="field">
+        <label class="field-label">Dal</label>
+        <div class="date-wheel-row">
+          <select id="add-alt-start-day" class="date-sel"></select>
+          <select id="add-alt-start-month" class="date-sel month"></select>
+          <select id="add-alt-start-year" class="date-sel"></select>
+        </div>
+      </div>
+      <div class="field">
+        <label class="field-label">Al <span style="font-weight:400;color:var(--text3)">(uguale se giornata singola)</span></label>
+        <div class="date-wheel-row">
+          <select id="add-alt-end-day" class="date-sel"></select>
+          <select id="add-alt-end-month" class="date-sel month"></select>
+          <select id="add-alt-end-year" class="date-sel"></select>
+        </div>
+      </div>
+      <label style="display:flex;align-items:center;gap:.6rem;cursor:pointer;font-size:.88rem;user-select:none;margin-bottom:.9rem">
+        <input type="checkbox" id="add-alt-allday" checked
+          style="width:16px;height:16px;accent-color:var(--purple);cursor:pointer">
+        Tutto il giorno
+      </label>
+      <div style="display:flex;gap:.75rem;margin-top:1rem">
+        <button id="btn-add-alt-cal" class="btn btn-primary" style="flex:1;background:var(--purple)"
+          onclick="calAddAltro()">Aggiungi</button>
         <button class="btn btn-ghost" style="flex:1"
           onclick="closeAddModal()">Annulla</button>
       </div>
@@ -2781,8 +2822,9 @@ function renderCalGrid() {
     const exp_d = (uscite  || []).filter(e => e.data === ds);
     const ric_d = getRicorrentiForDay(d);
     const rem_d = getReminders(ds);
+    const alt_d = getAltriForDay(ds);
 
-    // Evento prioritario (apt > entrata > uscita > reminder) — chip testo
+    // Evento prioritario (apt > entrata > uscita > reminder > altro) — chip testo
     let primaryChip = '';
     let extras = [];   // dots per gli altri eventi
 
@@ -2792,7 +2834,7 @@ function renderCalGrid() {
         ...apts_d.slice(1).map(() => 'apt'),
         ...inc_d.map(() => 'income'),
         ...exp_d.map(() => 'expense'), ...ric_d.map(() => 'expense'),
-        ...rem_d.map(() => 'reminder'),
+        ...rem_d.map(() => 'reminder'), ...alt_d.map(() => 'altro'),
       ];
     } else if (inc_d.length) {
       const label = inc_d[0].descrizione || `+€${parseFloat(inc_d[0].importo||0).toFixed(0)}`;
@@ -2800,16 +2842,19 @@ function renderCalGrid() {
       extras = [
         ...inc_d.slice(1).map(() => 'income'),
         ...exp_d.map(() => 'expense'), ...ric_d.map(() => 'expense'),
-        ...rem_d.map(() => 'reminder'),
+        ...rem_d.map(() => 'reminder'), ...alt_d.map(() => 'altro'),
       ];
     } else if (exp_d.length || ric_d.length) {
       const allExp = [...exp_d, ...ric_d];
       const label  = allExp[0].descrizione || `-€${parseFloat(allExp[0].importo||0).toFixed(0)}`;
       primaryChip  = `<div class="cal-ev-chip expense">${escHtml(label)}</div>`;
-      extras = [...allExp.slice(1).map(() => 'expense'), ...rem_d.map(() => 'reminder')];
+      extras = [...allExp.slice(1).map(() => 'expense'), ...rem_d.map(() => 'reminder'), ...alt_d.map(() => 'altro')];
     } else if (rem_d.length) {
       primaryChip = `<div class="cal-ev-chip reminder">${escHtml(rem_d[0].text || 'Reminder')}</div>`;
-      extras = rem_d.slice(1).map(() => 'reminder');
+      extras = [...rem_d.slice(1).map(() => 'reminder'), ...alt_d.map(() => 'altro')];
+    } else if (alt_d.length) {
+      primaryChip = `<div class="cal-ev-chip altro">${escHtml(alt_d[0].title || 'Evento')}</div>`;
+      extras = alt_d.slice(1).map(() => 'altro');
     }
 
     const dotsHtml = extras.slice(0, 3)
@@ -2867,8 +2912,9 @@ function renderDayEvents(d) {
   const exp  = (uscite  || []).filter(e => e.data === ds);
   const ric  = getRicorrentiForDay(d);
   const rems = getReminders(ds);
+  const altr = getAltriForDay(ds);
 
-  const total = apts.length + inc.length + exp.length + ric.length + rems.length;
+  const total = apts.length + inc.length + exp.length + ric.length + rems.length + altr.length;
 
   // Header della lista
   let html = `<div class="day-events-bar">
@@ -2974,6 +3020,25 @@ function renderDayEvents(d) {
     </div>`;
   });
 
+  // ⑥ Altro
+  altr.forEach(a => {
+    const multiDay = a.dateStart !== a.dateEnd;
+    const sub = [
+      a.allDay ? 'Tutto il giorno' : '',
+      multiDay ? `fino al ${fmtItDate(a.dateEnd)}` : ''
+    ].filter(Boolean).join(' · ');
+    html += `<div class="day-event-item">
+      <div class="day-event-icon">📎</div>
+      <div class="day-event-info">
+        <div class="day-event-title">${escHtml(a.title || 'Evento')}</div>
+        <div class="day-event-sub" style="color:var(--purple)">${sub || 'Evento'}</div>
+      </div>
+      <div class="day-event-actions">
+        <button class="entry-btn del" title="Elimina" onclick="calDeleteAltro('${a.id}')">✕</button>
+      </div>
+    </div>`;
+  });
+
   container.innerHTML = html;
 }
 
@@ -3043,7 +3108,7 @@ async function submitEditApt() {
 
 /* ── Inizializza wheel date (una tantum) ── */
 window.addEventListener('DOMContentLoaded', () => {
-  ['add-apt','add-rem','add-inc','add-exp','edit-apt'].forEach(p => {
+  ['add-apt','add-rem','add-inc','add-exp','edit-apt','add-alt-start','add-alt-end'].forEach(p => {
     _initWheels(p);
     _setWheels(p, dayStr(selectedDay));
   });
@@ -3109,6 +3174,51 @@ async function _calSwipeMonth(dir) {
 }
 
 /* ═══════════════════════════════════════════════════════
+   ALTRO — localStorage (eventi generici, anche multi-giorno)
+   ═══════════════════════════════════════════════════════ */
+
+function _altroKey() { return `altri_${currentUser?.id || 'anon'}`; }
+function _altroAll() {
+  try { return JSON.parse(localStorage.getItem(_altroKey()) || '[]'); } catch { return []; }
+}
+function _altroSave(arr) { localStorage.setItem(_altroKey(), JSON.stringify(arr)); }
+
+function getAltriForDay(ds) {
+  return _altroAll().filter(a => a.dateStart <= ds && ds <= (a.dateEnd || a.dateStart));
+}
+function addAltro(title, dateStart, dateEnd, allDay) {
+  const all = _altroAll();
+  const id  = Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+  all.push({ id, title, dateStart, dateEnd: dateEnd || dateStart, allDay, createdAt: Date.now() });
+  _altroSave(all);
+  return id;
+}
+function deleteAltro(id) { _altroSave(_altroAll().filter(a => a.id !== id)); }
+
+function calAddAltro() {
+  const title = document.getElementById('add-alt-title').value.trim();
+  if (!title) { showToast('Inserisci un titolo'); return; }
+
+  const dateStart = _getIsoFromWheels('add-alt-start');
+  const dateEnd   = _getIsoFromWheels('add-alt-end');
+  if (!dateStart || !dateEnd) { showToast('Seleziona le date'); return; }
+  if (dateEnd < dateStart)    { showToast('La data fine deve essere uguale o dopo quella di inizio'); return; }
+
+  const allDay = document.getElementById('add-alt-allday').checked;
+  addAltro(title, dateStart, dateEnd, allDay);
+  document.getElementById('add-alt-title').value = '';
+  closeAddModal();
+  showToast('Evento aggiunto 📎');
+  renderCalendarSection();
+}
+
+function calDeleteAltro(id) {
+  deleteAltro(id);
+  renderCalGrid();
+  renderDayEvents(selectedDay);
+}
+
+/* ═══════════════════════════════════════════════════════
    REMINDER — localStorage
    ═══════════════════════════════════════════════════════ */
 
@@ -3163,11 +3273,11 @@ function editReminder(id, newText) {
 
 function openAddModal(tab) {
   const ds = dayStr(selectedDay);
-  ['add-apt','add-rem','add-inc','add-exp'].forEach(p => _setWheels(p, ds));
+  ['add-apt','add-rem','add-inc','add-exp','add-alt-start','add-alt-end'].forEach(p => _setWheels(p, ds));
 
   // Mostra il form appuntamento per misurarne l'altezza, poi switcha al tab richiesto
   const aptForm = document.getElementById('add-form-apt');
-  ['add-form-rem','add-form-inc','add-form-exp'].forEach(id => {
+  ['add-form-rem','add-form-inc','add-form-exp','add-form-alt'].forEach(id => {
     const el = document.getElementById(id);
     el.style.display = 'none';
     el.style.minHeight = '';
@@ -3177,7 +3287,7 @@ function openAddModal(tab) {
 
   requestAnimationFrame(() => {
     const h = aptForm.offsetHeight;
-    ['add-form-apt','add-form-rem','add-form-inc','add-form-exp'].forEach(id => {
+    ['add-form-apt','add-form-rem','add-form-inc','add-form-exp','add-form-alt'].forEach(id => {
       document.getElementById(id).style.minHeight = h + 'px';
     });
     addModalTab(tab || 'appointment');
@@ -3189,9 +3299,9 @@ function closeAddModal() {
 }
 
 function addModalTab(tab) {
-  const tabs  = ['appointment','income','expense','reminder'];
-  const forms = { appointment:'add-form-apt', income:'add-form-inc', expense:'add-form-exp', reminder:'add-form-rem' };
-  const btns  = { appointment:'add-tab-apt',  income:'add-tab-inc',  expense:'add-tab-exp',  reminder:'add-tab-rem' };
+  const tabs  = ['appointment','income','expense','reminder','altro'];
+  const forms = { appointment:'add-form-apt', income:'add-form-inc', expense:'add-form-exp', reminder:'add-form-rem', altro:'add-form-alt' };
+  const btns  = { appointment:'add-tab-apt',  income:'add-tab-inc',  expense:'add-tab-exp',  reminder:'add-tab-rem', altro:'add-tab-alt' };
   tabs.forEach(t => {
     document.getElementById(forms[t]).style.display = t === tab ? 'block' : 'none';
     document.getElementById(btns[t]).classList.toggle('active', t === tab);
