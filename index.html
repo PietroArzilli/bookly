@@ -1237,6 +1237,18 @@ body {
       </div>
       <div class="field">
         <label style="display:flex;align-items:center;gap:.6rem;cursor:pointer;font-size:.88rem;user-select:none">
+          <input type="checkbox" id="add-apt-phone-chk"
+            style="width:16px;height:16px;accent-color:var(--accent);cursor:pointer"
+            onchange="document.getElementById('add-apt-phone-wrap').style.display=this.checked?'block':'none'">
+          Aggiungi telefono cliente
+        </label>
+        <div id="add-apt-phone-wrap" style="display:none;margin-top:.5rem">
+          <input type="tel" id="add-apt-phone" class="field-input"
+            placeholder="es. +39 333 1234567" inputmode="tel">
+        </div>
+      </div>
+      <div class="field">
+        <label style="display:flex;align-items:center;gap:.6rem;cursor:pointer;font-size:.88rem;user-select:none">
           <input type="checkbox" id="add-apt-reminder-chk"
             style="width:16px;height:16px;accent-color:var(--accent);cursor:pointer"
             onchange="document.getElementById('add-apt-reminder-wrap').style.display=this.checked?'block':'none'">
@@ -1430,6 +1442,10 @@ body {
     <div class="field">
       <label class="field-label">Note</label>
       <input type="text" id="edit-apt-notes" class="field-input">
+    </div>
+    <div class="field">
+      <label class="field-label">Telefono cliente <span style="font-weight:400;color:var(--text3)">(opzionale)</span></label>
+      <input type="tel" id="edit-apt-phone" class="field-input" placeholder="es. +39 333 1234567" inputmode="tel">
     </div>
     <div class="field">
       <label class="field-label">Stato</label>
@@ -2003,14 +2019,14 @@ function deleteEntry(type, id, onSuccess) {
 }
 
 // Aggiunge ottimisticamente: UI istantanea, sync in background
-function addAppuntamento(dateIso, timeVal, timeEnd, client, amtMin, amtMax, acconto, notes) {
+function addAppuntamento(dateIso, timeVal, timeEnd, client, amtMin, amtMax, acconto, notes, telefono) {
   const dataOra = timeVal
     ? dateIso + 'T' + timeVal + ':00' + getTzOffset()
     : dateIso + 'T00:00:00Z';
   const tempId = '_tmp_' + Date.now();
   const optimistic = { id: tempId, data_ora: dataOra, ora_fine: timeEnd || null,
     nome_cliente: client, importo_previsto: amtMin, importo_max: amtMax || null,
-    acconto: acconto || 0, note: notes, stato: 'confermato', user_id: currentUser.id };
+    acconto: acconto || 0, note: notes, telefono: telefono || null, stato: 'confermato', user_id: currentUser.id };
 
   const { start, end } = monthRange();
   const aptDate = new Date(dataOra).toLocaleDateString('sv');
@@ -2020,7 +2036,7 @@ function addAppuntamento(dateIso, timeVal, timeEnd, client, amtMin, amtMax, acco
   sb.from('appuntamenti').insert({
     user_id: currentUser.id, data_ora: dataOra, ora_fine: timeEnd || null,
     nome_cliente: client, importo_previsto: amtMin, importo_max: amtMax || null,
-    acconto: acconto || 0, note: notes, stato: 'confermato'
+    acconto: acconto || 0, note: notes, telefono: telefono || null, stato: 'confermato'
   }).select().single().then(({ data, error }) => {
     if (!error && data) {
       const idx = appuntamenti.findIndex(a => a.id === tempId);
@@ -2108,7 +2124,7 @@ function confirmRiportaEntrata(id, tassata, customImporto) {
     });
 }
 
-async function saveEditApt(id, dateIso, timeVal, timeEnd, client, amtMin, amtMax, acconto, notes, status) {
+async function saveEditApt(id, dateIso, timeVal, timeEnd, client, amtMin, amtMax, acconto, notes, telefono, status) {
   if (!id || !currentUser) return false;
   const dataOra = timeVal
     ? dateIso + 'T' + timeVal + ':00' + getTzOffset()
@@ -2119,7 +2135,7 @@ async function saveEditApt(id, dateIso, timeVal, timeEnd, client, amtMin, amtMax
     importo_previsto: isNaN(amtMin) ? 0 : amtMin,
     importo_max: amtMax || null,
     acconto: acconto || 0,
-    note: notes, stato: status
+    note: notes, telefono: telefono || null, stato: status
   };
   const { error } = await sb.from('appuntamenti').update(updates).eq('id', id).eq('user_id', currentUser.id);
   if (!error) {
@@ -3031,6 +3047,9 @@ function renderDayEvents(d) {
       : amtMin > 0 ? `€${amtMin.toFixed(2)}` : '';
     const accontoStr = acconto > 0 ? `acconto €${acconto.toFixed(2)}` : '';
     const endStr  = a.ora_fine ? ` – ${a.ora_fine}` : '';
+    const telStr  = a.telefono
+      ? `<a href="tel:${escHtml(a.telefono)}" style="color:var(--accent);text-decoration:none;font-size:.72rem">📞 ${escHtml(a.telefono)}</a>`
+      : '';
     const sub     = [amtStr, accontoStr, statusMap[a.stato] || a.stato, a.note ? escHtml(a.note) : '']
                     .filter(Boolean).join(' · ');
     const titleStr = timeStr
@@ -3041,6 +3060,7 @@ function renderDayEvents(d) {
       <div class="day-event-info">
         <div class="day-event-title">${titleStr}</div>
         <div class="day-event-sub">${sub}</div>
+        ${telStr ? `<div style="margin-top:2px">${telStr}</div>` : ''}
       </div>
       <div class="day-event-actions">
         ${a.stato !== 'cancellato'
@@ -3172,13 +3192,14 @@ function openEditAptModal(id) {
     ? dt.toLocaleTimeString('it-IT', { hour:'2-digit', minute:'2-digit', timeZone:'Europe/Rome' })
     : '';
 
-  document.getElementById('edit-apt-time-end').value = a.ora_fine || '';
-  document.getElementById('edit-apt-client').value   = a.nome_cliente || '';
-  document.getElementById('edit-apt-amount').value   = parseFloat(a.importo_previsto || 0) > 0 ? parseFloat(a.importo_previsto).toFixed(2) : '';
+  document.getElementById('edit-apt-time-end').value  = a.ora_fine || '';
+  document.getElementById('edit-apt-client').value    = a.nome_cliente || '';
+  document.getElementById('edit-apt-amount').value    = parseFloat(a.importo_previsto || 0) > 0 ? parseFloat(a.importo_previsto).toFixed(2) : '';
   document.getElementById('edit-apt-amount-max').value = parseFloat(a.importo_max || 0) > 0 ? parseFloat(a.importo_max).toFixed(2) : '';
-  document.getElementById('edit-apt-acconto').value  = parseFloat(a.acconto || 0) > 0 ? parseFloat(a.acconto).toFixed(2) : '';
-  document.getElementById('edit-apt-notes').value    = a.note || '';
-  document.getElementById('edit-apt-status').value   = a.stato || 'confermato';
+  document.getElementById('edit-apt-acconto').value   = parseFloat(a.acconto || 0) > 0 ? parseFloat(a.acconto).toFixed(2) : '';
+  document.getElementById('edit-apt-notes').value     = a.note || '';
+  document.getElementById('edit-apt-phone').value     = a.telefono || '';
+  document.getElementById('edit-apt-status').value    = a.stato || 'confermato';
 
   document.getElementById('edit-apt-modal').style.display = 'flex';
 }
@@ -3203,6 +3224,7 @@ async function submitEditApt() {
   const amtMax   = parseFloat(document.getElementById('edit-apt-amount-max').value) || 0;
   const acconto  = parseFloat(document.getElementById('edit-apt-acconto').value) || 0;
   const notes    = document.getElementById('edit-apt-notes').value.trim();
+  const telefono = document.getElementById('edit-apt-phone').value.trim();
   const status   = document.getElementById('edit-apt-status').value;
 
   if (timeVal && timeEnd && timeEnd <= timeVal) {
@@ -3219,7 +3241,7 @@ async function submitEditApt() {
   const btn = document.getElementById('btn-submit-edit-apt');
   btn.disabled = true; btn.textContent = 'Salvataggio…';
 
-  await saveEditApt(_editingAptId, dateIso, timeVal, timeEnd, client, amtMin, amtMax, acconto, notes, status);
+  await saveEditApt(_editingAptId, dateIso, timeVal, timeEnd, client, amtMin, amtMax, acconto, notes, telefono, status);
 
   btn.disabled = false; btn.textContent = 'Salva';
   closeEditAptModal();
@@ -3445,6 +3467,8 @@ function calAddAppuntamento() {
   const accontoChk = document.getElementById('add-apt-acconto-chk');
   const acconto  = accontoChk?.checked ? (parseFloat(document.getElementById('add-apt-acconto').value) || 0) : 0;
   const notes    = document.getElementById('add-apt-notes').value.trim();
+  const phoneChk = document.getElementById('add-apt-phone-chk');
+  const telefono = phoneChk?.checked ? document.getElementById('add-apt-phone').value.trim() : '';
 
   if (timeVal && timeEnd && timeEnd <= timeVal) {
     showToast("L'ora di fine deve essere dopo quella di inizio"); return;
@@ -3470,14 +3494,15 @@ function calAddAppuntamento() {
   }
 
   // Reset form
-  ['add-apt-client','add-apt-amount','add-apt-amount-max','add-apt-acconto','add-apt-notes'].forEach(id => {
+  ['add-apt-client','add-apt-amount','add-apt-amount-max','add-apt-acconto','add-apt-notes','add-apt-phone'].forEach(id => {
     document.getElementById(id).value = '';
   });
   document.getElementById('add-apt-time').value = '';
   document.getElementById('add-apt-time-end').value = '';
   if (accontoChk) { accontoChk.checked = false; document.getElementById('add-apt-acconto-wrap').style.display = 'none'; }
+  if (phoneChk)   { phoneChk.checked = false;   document.getElementById('add-apt-phone-wrap').style.display = 'none'; }
 
-  addAppuntamento(dateIso, timeVal, timeEnd, client, amtMin, amtMax, acconto, notes);
+  addAppuntamento(dateIso, timeVal, timeEnd, client, amtMin, amtMax, acconto, notes, telefono);
   closeAddModal();
   showToast('Appuntamento aggiunto ✓');
   renderCalendarSection();
