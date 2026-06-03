@@ -2102,10 +2102,10 @@ function confirmRiportaEntrata(id, tassata, customImporto) {
   if (aptDate >= start && aptDate <= end) entrate.push(tempEntry);
   showToast('Entrata registrata ✓');
 
-  // Reminder fattura automatico 13 giorni dopo (solo se tassata)
+  // Reminder fattura automatico 12 giorni dopo (solo se tassata)
   if (tassata) {
     const d = new Date(aptDate + 'T00:00:00');
-    d.setDate(d.getDate() + 13);
+    d.setDate(d.getDate() + 12);
     const remDate = d.toLocaleDateString('sv');
     addReminder(remDate, 'Fattura – ' + apt.nome_cliente);
   }
