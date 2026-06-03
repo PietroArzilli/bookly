@@ -2899,7 +2899,7 @@ function renderDayEvents(d) {
     const sub    = [amtStr, statusMap[a.stato] || a.stato, a.note ? escHtml(a.note) : '']
                     .filter(Boolean).join(' · ');
     const titleStr = timeStr
-      ? `${escHtml(a.nome_cliente || 'Cliente')} <strong>${timeStr}</strong>`
+      ? `<strong>${timeStr} - ${escHtml(a.nome_cliente || 'Cliente')}</strong>`
       : escHtml(a.nome_cliente || 'Cliente');
     html += `<div class="day-event-item">
       <div class="day-event-icon">📋</div>
