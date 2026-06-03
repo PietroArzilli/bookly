@@ -2888,12 +2888,15 @@ function renderDayEvents(d) {
       : '';
     const amt    = parseFloat(a.importo_previsto || 0);
     const amtStr = amt > 0 ? `€${amt.toFixed(2)}` : '';
-    const sub    = [timeStr, amtStr, statusMap[a.stato] || a.stato, a.note ? escHtml(a.note) : '']
+    const sub    = [amtStr, statusMap[a.stato] || a.stato, a.note ? escHtml(a.note) : '']
                     .filter(Boolean).join(' · ');
+    const titleStr = timeStr
+      ? `${escHtml(a.nome_cliente || 'Cliente')} <strong>${timeStr}</strong>`
+      : escHtml(a.nome_cliente || 'Cliente');
     html += `<div class="day-event-item">
       <div class="day-event-icon">📋</div>
       <div class="day-event-info">
-        <div class="day-event-title">${escHtml(a.nome_cliente || 'Cliente')}</div>
+        <div class="day-event-title">${titleStr}</div>
         <div class="day-event-sub">${sub}</div>
       </div>
       <div class="day-event-actions">
