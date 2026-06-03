@@ -3881,7 +3881,13 @@ window.addEventListener('DOMContentLoaded', async () => {
 
   // Registra Service Worker per apertura istantanea
   if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('/sw.js', { updateViaCache: 'none' });
+    navigator.serviceWorker.register('/sw.js', { updateViaCache: 'none' })
+      .then(reg => {
+        reg.update(); // controlla subito se c'è una versione nuova
+        navigator.serviceWorker.addEventListener('controllerchange', () => {
+          window.location.reload(); // ricarica la pagina quando il nuovo SW prende il controllo
+        });
+      });
   }
 });
 </script>
