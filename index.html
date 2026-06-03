@@ -3047,6 +3047,22 @@ window.addEventListener('DOMContentLoaded', () => {
     _initWheels(p);
     _setWheels(p, dayStr(selectedDay));
   });
+
+  // Swipe orizzontale per cambiare mese nel calendario
+  let _swipeX = null;
+  const container = document.getElementById('sections-container');
+  container.addEventListener('touchstart', e => {
+    _swipeX = e.touches[0].clientX;
+  }, { passive: true });
+  container.addEventListener('touchend', e => {
+    if (_swipeX === null) return;
+    const dx = e.changedTouches[0].clientX - _swipeX;
+    _swipeX = null;
+    if (Math.abs(dx) < 50) return; // soglia minima
+    const calActive = document.getElementById('section-calendar')?.classList.contains('active');
+    if (!calActive) return;
+    calChangeMonth(dx < 0 ? 1 : -1);
+  }, { passive: true });
 });
 
 /* ═══════════════════════════════════════════════════════
