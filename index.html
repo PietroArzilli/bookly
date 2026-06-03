@@ -1207,16 +1207,21 @@ body {
         <label class="field-label">Nome cliente</label>
         <input type="text" id="add-apt-client" class="field-input" placeholder="es. Marco R.">
       </div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:.5rem" class="field">
-        <div>
-          <label class="field-label">Importo min (€) <span style="font-weight:400;color:var(--text3)">(opz.)</span></label>
-          <input type="number" id="add-apt-amount" class="field-input"
-            placeholder="es. 150" step="0.01" min="0" inputmode="decimal">
+      <div class="field">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.35rem">
+          <label class="field-label" style="margin:0">Importo (€) <span style="font-weight:400;color:var(--text3)">(opz.)</span></label>
+          <label style="display:flex;align-items:center;gap:.35rem;cursor:pointer;font-size:.75rem;color:var(--accent);font-weight:600;user-select:none">
+            <input type="checkbox" id="add-apt-fascia-chk"
+              style="width:14px;height:14px;accent-color:var(--accent);cursor:pointer"
+              onchange="document.getElementById('add-apt-amount-max-wrap').style.display=this.checked?'block':'none';document.getElementById('add-apt-amount').placeholder=this.checked?'es. 150':'es. 150'">
+            Fascia di prezzo
+          </label>
         </div>
-        <div>
-          <label class="field-label">Importo max (€) <span style="font-weight:400;color:var(--text3)">(opz.)</span></label>
+        <input type="number" id="add-apt-amount" class="field-input"
+          placeholder="es. 150" step="0.01" min="0" inputmode="decimal">
+        <div id="add-apt-amount-max-wrap" style="display:none;margin-top:.5rem">
           <input type="number" id="add-apt-amount-max" class="field-input"
-            placeholder="es. 200" step="0.01" min="0" inputmode="decimal">
+            placeholder="es. 200 (importo massimo)" step="0.01" min="0" inputmode="decimal">
         </div>
       </div>
       <div class="field">
@@ -1423,16 +1428,21 @@ body {
       <label class="field-label">Nome cliente</label>
       <input type="text" id="edit-apt-client" class="field-input" placeholder="es. Marco R.">
     </div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:.5rem" class="field">
-      <div>
-        <label class="field-label">Importo min (€)</label>
-        <input type="number" id="edit-apt-amount" class="field-input"
-          placeholder="es. 150" step="0.01" min="0" inputmode="decimal">
+    <div class="field">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.35rem">
+        <label class="field-label" style="margin:0">Importo (€)</label>
+        <label style="display:flex;align-items:center;gap:.35rem;cursor:pointer;font-size:.75rem;color:var(--accent);font-weight:600;user-select:none">
+          <input type="checkbox" id="edit-apt-fascia-chk"
+            style="width:14px;height:14px;accent-color:var(--accent);cursor:pointer"
+            onchange="document.getElementById('edit-apt-amount-max-wrap').style.display=this.checked?'block':'none'">
+          Fascia di prezzo
+        </label>
       </div>
-      <div>
-        <label class="field-label">Importo max (€)</label>
+      <input type="number" id="edit-apt-amount" class="field-input"
+        placeholder="es. 150" step="0.01" min="0" inputmode="decimal">
+      <div id="edit-apt-amount-max-wrap" style="display:none;margin-top:.5rem">
         <input type="number" id="edit-apt-amount-max" class="field-input"
-          placeholder="es. 200" step="0.01" min="0" inputmode="decimal">
+          placeholder="es. 200 (importo massimo)" step="0.01" min="0" inputmode="decimal">
       </div>
     </div>
     <div class="field">
@@ -3196,7 +3206,10 @@ function openEditAptModal(id) {
   document.getElementById('edit-apt-time-end').value  = a.ora_fine || '';
   document.getElementById('edit-apt-client').value    = a.nome_cliente || '';
   document.getElementById('edit-apt-amount').value    = parseFloat(a.importo_previsto || 0) > 0 ? parseFloat(a.importo_previsto).toFixed(2) : '';
-  document.getElementById('edit-apt-amount-max').value = parseFloat(a.importo_max || 0) > 0 ? parseFloat(a.importo_max).toFixed(2) : '';
+  const hasMax = parseFloat(a.importo_max || 0) > 0;
+  document.getElementById('edit-apt-fascia-chk').checked = hasMax;
+  document.getElementById('edit-apt-amount-max-wrap').style.display = hasMax ? 'block' : 'none';
+  document.getElementById('edit-apt-amount-max').value = hasMax ? parseFloat(a.importo_max).toFixed(2) : '';
   document.getElementById('edit-apt-acconto').value   = parseFloat(a.acconto || 0) > 0 ? parseFloat(a.acconto).toFixed(2) : '';
   document.getElementById('edit-apt-notes').value     = a.note || '';
   document.getElementById('edit-apt-phone').value     = a.telefono || '';
@@ -3502,6 +3515,8 @@ function calAddAppuntamento() {
   document.getElementById('add-apt-time-end').value = '';
   if (accontoChk) { accontoChk.checked = false; document.getElementById('add-apt-acconto-wrap').style.display = 'none'; }
   if (phoneChk)   { phoneChk.checked = false;   document.getElementById('add-apt-phone-wrap').style.display = 'none'; }
+  const fasciaChk = document.getElementById('add-apt-fascia-chk');
+  if (fasciaChk)  { fasciaChk.checked = false;  document.getElementById('add-apt-amount-max-wrap').style.display = 'none'; }
 
   addAppuntamento(dateIso, timeVal, timeEnd, client, amtMin, amtMax, acconto, notes, telefono);
   closeAddModal();
