@@ -1989,6 +1989,14 @@ function confirmRiportaEntrata(id, tassata) {
   if (aptDate >= start && aptDate <= end) entrate.push(tempEntry);
   showToast('Entrata registrata ✓');
 
+  // Reminder fattura automatico 13 giorni dopo (solo se tassata)
+  if (tassata) {
+    const d = new Date(aptDate + 'T00:00:00');
+    d.setDate(d.getDate() + 13);
+    const remDate = d.toLocaleDateString('sv');
+    addReminder(remDate, 'Fattura – ' + apt.nome_cliente);
+  }
+
   // Sync in background: inserisci entrata, poi elimina appuntamento
   sb.from('entrate').insert({ user_id: currentUser.id, importo, descrizione: desc, data: aptDate, tassata })
     .select().single().then(({ data, error }) => {
