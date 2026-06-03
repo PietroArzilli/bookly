@@ -550,7 +550,7 @@ body {
 /* ── CALENDARIO: griglia ── */
 .cal-weekdays { display:grid; grid-template-columns:repeat(7,1fr); padding:.6rem .75rem .2rem; background:var(--surface); }
 .cal-weekday  { text-align:center; font-size:.6rem; font-weight:600; color:var(--text3); letter-spacing:.02em; }
-.cal-grid     { display:grid; grid-template-columns:repeat(7,1fr); gap:0; padding:.15rem .5rem .6rem; background:var(--surface); }
+.cal-grid     { display:grid; grid-template-columns:repeat(7,1fr); gap:0; padding:.15rem .5rem .6rem; background:var(--surface); will-change:transform,opacity; }
 /* Celle: aperte, senza bordi, numeri galleggianti */
 .cal-cell { display:flex; flex-direction:column; align-items:center; cursor:pointer; padding:3px 1px 4px; min-height:62px; overflow:hidden; border-radius:10px; transition:background .14s; }
 .cal-cell:active:not(.empty) { background:rgba(0,0,0,.05); }
@@ -3061,9 +3061,53 @@ window.addEventListener('DOMContentLoaded', () => {
     if (Math.abs(dx) < 50) return; // soglia minima
     const calActive = document.getElementById('section-calendar')?.classList.contains('active');
     if (!calActive) return;
-    calChangeMonth(dx < 0 ? 1 : -1);
+    _calSwipeMonth(dx < 0 ? 1 : -1);
   }, { passive: true });
 });
+
+async function _calSwipeMonth(dir) {
+  const grid = document.getElementById('cal-grid');
+  if (!grid) return;
+
+  // 1. Anima uscita immediata (senza aspettare la rete)
+  grid.style.transition = 'transform 0.18s ease, opacity 0.18s ease';
+  grid.style.transform  = `translateX(${dir > 0 ? '-45%' : '45%'})`;
+  grid.style.opacity    = '0';
+
+  // 2. Aggiorna stato mese subito
+  currentMonth += dir;
+  if (currentMonth > 11) { currentMonth = 0; currentYear++; }
+  if (currentMonth < 0)  { currentMonth = 11; currentYear--; }
+  const now = new Date();
+  selectedDay = (currentYear === now.getFullYear() && currentMonth === now.getMonth())
+    ? now.getDate() : 1;
+  const labelEl = document.getElementById('cal-month-label');
+  if (labelEl) labelEl.textContent = `${MONTHS[currentMonth]} ${currentYear}`;
+
+  // 3. Carica dati freschi in background
+  const dataReady = Promise.all([loadMonthData(), loadRicorrenti().catch(() => {})]);
+
+  // 4. Attendi fine animazione uscita, poi rendi il nuovo mese
+  await new Promise(r => setTimeout(r, 180));
+  renderCalGrid();
+  renderDayEvents(selectedDay);
+
+  // 5. Animazione entrata dal lato opposto
+  grid.style.transition = 'none';
+  grid.style.transform  = `translateX(${dir > 0 ? '45%' : '-45%'})`;
+  grid.style.opacity    = '0';
+  requestAnimationFrame(() => requestAnimationFrame(() => {
+    grid.style.transition = 'transform 0.22s ease, opacity 0.22s ease';
+    grid.style.transform  = 'translateX(0)';
+    grid.style.opacity    = '1';
+  }));
+
+  // 6. Quando arrivano i dati freschi, aggiorna silenziosamente
+  await dataReady;
+  renderCalGrid();
+  renderDayEvents(selectedDay);
+  _saveCache();
+}
 
 /* ═══════════════════════════════════════════════════════
    REMINDER — localStorage
