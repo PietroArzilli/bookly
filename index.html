@@ -3096,11 +3096,10 @@ async function _calSwipeMonth(dir) {
   grid.style.transition = 'none';
   grid.style.transform  = `translateX(${dir > 0 ? '45%' : '-45%'})`;
   grid.style.opacity    = '0';
-  requestAnimationFrame(() => requestAnimationFrame(() => {
-    grid.style.transition = 'transform 0.22s ease, opacity 0.22s ease';
-    grid.style.transform  = 'translateX(0)';
-    grid.style.opacity    = '1';
-  }));
+  void grid.offsetHeight; // forza reflow sincrono → garantisce che la posizione di partenza sia applicata
+  grid.style.transition = 'transform 0.22s ease, opacity 0.22s ease';
+  grid.style.transform  = 'translateX(0)';
+  grid.style.opacity    = '1';
 
   // 6. Quando arrivano i dati freschi, aggiorna silenziosamente
   await dataReady;
