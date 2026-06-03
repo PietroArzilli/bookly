@@ -1192,18 +1192,43 @@ body {
           <select id="add-apt-year" class="date-sel"></select>
         </div>
       </div>
-      <div class="field">
-        <label class="field-label">Ora <span style="font-weight:400;color:var(--text3)">(opzionale)</span></label>
-        <input type="time" id="add-apt-time" class="field-input">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:.5rem" class="field">
+        <div>
+          <label class="field-label">Ora inizio <span style="font-weight:400;color:var(--text3)">(opz.)</span></label>
+          <input type="time" id="add-apt-time" class="field-input">
+        </div>
+        <div>
+          <label class="field-label">Ora fine <span style="font-weight:400;color:var(--text3)">(opz.)</span></label>
+          <input type="time" id="add-apt-time-end" class="field-input">
+        </div>
       </div>
       <div class="field">
         <label class="field-label">Nome cliente</label>
         <input type="text" id="add-apt-client" class="field-input" placeholder="es. Marco R.">
       </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:.5rem" class="field">
+        <div>
+          <label class="field-label">Importo min (€) <span style="font-weight:400;color:var(--text3)">(opz.)</span></label>
+          <input type="number" id="add-apt-amount" class="field-input"
+            placeholder="es. 150" step="0.01" min="0" inputmode="decimal">
+        </div>
+        <div>
+          <label class="field-label">Importo max (€) <span style="font-weight:400;color:var(--text3)">(opz.)</span></label>
+          <input type="number" id="add-apt-amount-max" class="field-input"
+            placeholder="es. 200" step="0.01" min="0" inputmode="decimal">
+        </div>
+      </div>
       <div class="field">
-        <label class="field-label">Importo previsto (€) <span style="font-weight:400;color:var(--text3)">(opzionale)</span></label>
-        <input type="number" id="add-apt-amount" class="field-input"
-          placeholder="0,00" step="0.01" min="0" inputmode="decimal">
+        <label style="display:flex;align-items:center;gap:.6rem;cursor:pointer;font-size:.88rem;user-select:none">
+          <input type="checkbox" id="add-apt-acconto-chk"
+            style="width:16px;height:16px;accent-color:var(--accent);cursor:pointer"
+            onchange="document.getElementById('add-apt-acconto-wrap').style.display=this.checked?'block':'none'">
+          Acconto ricevuto
+        </label>
+        <div id="add-apt-acconto-wrap" style="display:none;margin-top:.5rem">
+          <input type="number" id="add-apt-acconto" class="field-input"
+            placeholder="es. 50,00" step="0.01" min="0" inputmode="decimal">
+        </div>
       </div>
       <div class="field">
         <label class="field-label">Note</label>
@@ -1371,18 +1396,36 @@ body {
         <select id="edit-apt-year" class="date-sel"></select>
       </div>
     </div>
-    <div class="field">
-      <label class="field-label">Ora <span style="font-weight:400;color:var(--text3)">(opzionale)</span></label>
-      <input type="time" id="edit-apt-time" class="field-input">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:.5rem" class="field">
+      <div>
+        <label class="field-label">Ora inizio <span style="font-weight:400;color:var(--text3)">(opz.)</span></label>
+        <input type="time" id="edit-apt-time" class="field-input">
+      </div>
+      <div>
+        <label class="field-label">Ora fine <span style="font-weight:400;color:var(--text3)">(opz.)</span></label>
+        <input type="time" id="edit-apt-time-end" class="field-input">
+      </div>
     </div>
     <div class="field">
       <label class="field-label">Nome cliente</label>
       <input type="text" id="edit-apt-client" class="field-input" placeholder="es. Marco R.">
     </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:.5rem" class="field">
+      <div>
+        <label class="field-label">Importo min (€)</label>
+        <input type="number" id="edit-apt-amount" class="field-input"
+          placeholder="es. 150" step="0.01" min="0" inputmode="decimal">
+      </div>
+      <div>
+        <label class="field-label">Importo max (€)</label>
+        <input type="number" id="edit-apt-amount-max" class="field-input"
+          placeholder="es. 200" step="0.01" min="0" inputmode="decimal">
+      </div>
+    </div>
     <div class="field">
-      <label class="field-label">Importo previsto (€)</label>
-      <input type="number" id="edit-apt-amount" class="field-input"
-        placeholder="0,00" step="0.01" min="0" inputmode="decimal">
+      <label class="field-label">Acconto (€) <span style="font-weight:400;color:var(--text3)">(opzionale)</span></label>
+      <input type="number" id="edit-apt-acconto" class="field-input"
+        placeholder="es. 50,00" step="0.01" min="0" inputmode="decimal">
     </div>
     <div class="field">
       <label class="field-label">Note</label>
@@ -1960,13 +2003,14 @@ function deleteEntry(type, id, onSuccess) {
 }
 
 // Aggiunge ottimisticamente: UI istantanea, sync in background
-function addAppuntamento(dateIso, timeVal, client, amtRaw, notes) {
+function addAppuntamento(dateIso, timeVal, timeEnd, client, amtMin, amtMax, acconto, notes) {
   const dataOra = timeVal
     ? dateIso + 'T' + timeVal + ':00' + getTzOffset()
     : dateIso + 'T00:00:00Z';
   const tempId = '_tmp_' + Date.now();
-  const optimistic = { id: tempId, data_ora: dataOra, nome_cliente: client,
-    importo_previsto: amtRaw, note: notes, stato: 'confermato', user_id: currentUser.id };
+  const optimistic = { id: tempId, data_ora: dataOra, ora_fine: timeEnd || null,
+    nome_cliente: client, importo_previsto: amtMin, importo_max: amtMax || null,
+    acconto: acconto || 0, note: notes, stato: 'confermato', user_id: currentUser.id };
 
   const { start, end } = monthRange();
   const aptDate = new Date(dataOra).toLocaleDateString('sv');
@@ -1974,8 +2018,9 @@ function addAppuntamento(dateIso, timeVal, client, amtRaw, notes) {
 
   // Sync in background
   sb.from('appuntamenti').insert({
-    user_id: currentUser.id, data_ora: dataOra, nome_cliente: client,
-    importo_previsto: amtRaw, note: notes, stato: 'confermato'
+    user_id: currentUser.id, data_ora: dataOra, ora_fine: timeEnd || null,
+    nome_cliente: client, importo_previsto: amtMin, importo_max: amtMax || null,
+    acconto: acconto || 0, note: notes, stato: 'confermato'
   }).select().single().then(({ data, error }) => {
     if (!error && data) {
       const idx = appuntamenti.findIndex(a => a.id === tempId);
@@ -2014,13 +2059,13 @@ function deleteAppuntamento(id) {
 }
 
 // Riporta ottimisticamente: UI istantanea → sync in background
-function confirmRiportaEntrata(id, tassata) {
+function confirmRiportaEntrata(id, tassata, customImporto) {
   if (!id || !currentUser) return;
   const apt = appuntamenti.find(a => String(a.id) === String(id));
   if (!apt) return;
   const aptDate = apt.data_ora ? new Date(apt.data_ora).toLocaleDateString('sv') : new Date().toLocaleDateString('sv');
   const desc = apt.nome_cliente + (apt.note ? ' — ' + apt.note : '');
-  const importo = parseFloat(apt.importo_previsto || 0);
+  const importo = customImporto !== undefined ? customImporto : parseFloat(apt.importo_previsto || 0);
 
   // Optimistic: rimuovi SOLO questo appuntamento, aggiungi entrata con ID temp
   appuntamenti = appuntamenti.filter(a => String(a.id) !== String(id));
@@ -2063,17 +2108,18 @@ function confirmRiportaEntrata(id, tassata) {
     });
 }
 
-async function saveEditApt(id, dateIso, timeVal, client, amtRaw, notes, status) {
+async function saveEditApt(id, dateIso, timeVal, timeEnd, client, amtMin, amtMax, acconto, notes, status) {
   if (!id || !currentUser) return false;
   const dataOra = timeVal
     ? dateIso + 'T' + timeVal + ':00' + getTzOffset()
     : dateIso + 'T00:00:00Z';
   const updates = {
-    data_ora: dataOra,
+    data_ora: dataOra, ora_fine: timeEnd || null,
     nome_cliente: client,
-    importo_previsto: isNaN(amtRaw) ? 0 : amtRaw,
-    note: notes,
-    stato: status
+    importo_previsto: isNaN(amtMin) ? 0 : amtMin,
+    importo_max: amtMax || null,
+    acconto: acconto || 0,
+    note: notes, stato: status
   };
   const { error } = await sb.from('appuntamenti').update(updates).eq('id', id).eq('user_id', currentUser.id);
   if (!error) {
@@ -2519,18 +2565,40 @@ function homeDeleteEntry(type, id) {
 
 /* ── Modal tasse ── */
 let _taxCallback = null;
+let _taxAptId    = null;
 
 function _showTaxModal(id, callback) {
-  const apt = (appuntamenti || []).find(a => String(a.id) === String(id));
-  const amt = parseFloat(apt?.importo_previsto || 0);
+  const apt     = (appuntamenti || []).find(a => String(a.id) === String(id));
+  const amtMin  = parseFloat(apt?.importo_previsto || 0);
+  const amtMax  = parseFloat(apt?.importo_max || 0);
+  const acconto = parseFloat(apt?.acconto || 0);
+  const hasFascia = amtMax > 0 && amtMax !== amtMin;
   const pct = userProfile?.aliquota_tasse || 0;
 
-  // Se non c'è un importo previsto, salta il modal
-  if (amt <= 0) { callback(pct > 0); return; }
+  // Se non c'è importo e non è fascia, salta il modal
+  if (amtMin <= 0 && !hasFascia) { callback(pct > 0, 0); return; }
 
   _taxCallback = callback;
+  _taxAptId    = id;
+
   const amtEl = document.getElementById('tax-modal-amount');
-  if (amtEl) amtEl.textContent = `Importo: €${amt.toFixed(2)}`;
+  if (amtEl) {
+    if (hasFascia) {
+      amtEl.innerHTML = `
+        <div class="field" style="margin-bottom:.75rem">
+          <label class="field-label">Importo effettivo (€)</label>
+          <input type="number" id="tax-modal-custom-amt" class="field-input"
+            placeholder="da €${amtMin} a €${amtMax}" step="0.01" min="0" inputmode="decimal">
+          <div class="field-hint">Fascia prevista: €${amtMin}–€${amtMax}${acconto > 0 ? ` · acconto €${acconto}` : ''}</div>
+        </div>`;
+    } else {
+      const netto = acconto > 0 ? amtMin - acconto : amtMin;
+      amtEl.textContent = acconto > 0
+        ? `€${amtMin.toFixed(2)} − acconto €${acconto.toFixed(2)} = €${netto.toFixed(2)}`
+        : `Importo: €${amtMin.toFixed(2)}`;
+    }
+  }
+
   const lbl = document.getElementById('tax-modal-label');
   if (lbl) lbl.textContent = pct > 0 ? `Applica tasse (${pct}%)` : 'Applica tasse';
   document.getElementById('tax-modal-check').checked = pct > 0;
@@ -2539,20 +2607,35 @@ function _showTaxModal(id, callback) {
 
 function _closeTaxModal() {
   document.getElementById('tax-modal').style.display = 'none';
-  _taxCallback = null;
+  _taxCallback = null; _taxAptId = null;
 }
 
 function _confirmTax() {
+  const apt     = (appuntamenti || []).find(a => String(a.id) === String(_taxAptId));
+  const amtMin  = parseFloat(apt?.importo_previsto || 0);
+  const amtMax  = parseFloat(apt?.importo_max || 0);
+  const acconto = parseFloat(apt?.acconto || 0);
+  const hasFascia = amtMax > 0 && amtMax !== amtMin;
+
+  let finalAmt;
+  if (hasFascia) {
+    finalAmt = parseFloat(document.getElementById('tax-modal-custom-amt')?.value || 0);
+    if (!finalAmt || finalAmt <= 0) { showToast("Inserisci l'importo effettivo"); return; }
+  } else {
+    finalAmt = amtMin;
+  }
+  if (acconto > 0) finalAmt = Math.max(0, finalAmt - acconto);
+
   const tassata = document.getElementById('tax-modal-check').checked;
   const cb = _taxCallback;
   _closeTaxModal();
-  if (cb) cb(tassata);
+  if (cb) cb(tassata, finalAmt);
 }
 
 /* ── Riporta appuntamento come entrata ── */
 function homeRiporta(id) {
-  _showTaxModal(id, (tassata) => {
-    confirmRiportaEntrata(id, tassata);
+  _showTaxModal(id, (tassata, finalAmt) => {
+    confirmRiportaEntrata(id, tassata, finalAmt);
     renderHomeView();
   });
 }
@@ -2940,12 +3023,18 @@ function renderDayEvents(d) {
     const timeStr = !midnight
       ? dt.toLocaleTimeString('it-IT', { hour:'2-digit', minute:'2-digit', timeZone:'Europe/Rome' })
       : '';
-    const amt    = parseFloat(a.importo_previsto || 0);
-    const amtStr = amt > 0 ? `€${amt.toFixed(2)}` : '';
-    const sub    = [amtStr, statusMap[a.stato] || a.stato, a.note ? escHtml(a.note) : '']
+    const amtMin  = parseFloat(a.importo_previsto || 0);
+    const amtMax  = parseFloat(a.importo_max || 0);
+    const acconto = parseFloat(a.acconto || 0);
+    const amtStr  = amtMax > 0 && amtMax !== amtMin
+      ? `€${amtMin.toFixed(0)}–€${amtMax.toFixed(0)}`
+      : amtMin > 0 ? `€${amtMin.toFixed(2)}` : '';
+    const accontoStr = acconto > 0 ? `acconto €${acconto.toFixed(2)}` : '';
+    const endStr  = a.ora_fine ? ` – ${a.ora_fine}` : '';
+    const sub     = [amtStr, accontoStr, statusMap[a.stato] || a.stato, a.note ? escHtml(a.note) : '']
                     .filter(Boolean).join(' · ');
     const titleStr = timeStr
-      ? `<strong>${timeStr} - ${escHtml(a.nome_cliente || 'Cliente')}</strong>`
+      ? `<strong>${timeStr}${endStr} - ${escHtml(a.nome_cliente || 'Cliente')}</strong>`
       : escHtml(a.nome_cliente || 'Cliente');
     html += `<div class="day-event-item">
       <div class="day-event-icon">📋</div>
@@ -3044,6 +3133,23 @@ function renderDayEvents(d) {
 
 
 
+// Controlla sovrapposizione oraria tra appuntamenti (solo se entrambi hanno ora inizio+fine)
+function _checkAptConflict(dateIso, timeStart, timeEnd, excludeId) {
+  if (!timeStart || !timeEnd) return null;
+  return (appuntamenti || []).find(a => {
+    if (excludeId && String(a.id) === String(excludeId)) return false;
+    if (!a.data_ora) return false;
+    const aDate = new Date(a.data_ora).toLocaleDateString('sv', {timeZone:'Europe/Rome'});
+    if (aDate !== dateIso) return false;
+    const dt = new Date(a.data_ora);
+    if (dt.getUTCHours() === 0 && dt.getUTCMinutes() === 0 && !a.ora_fine) return false;
+    const aStart = dt.toLocaleTimeString('it-IT', {hour:'2-digit', minute:'2-digit', timeZone:'Europe/Rome'});
+    const aEnd   = a.ora_fine;
+    if (!aEnd) return false;
+    return timeStart < aEnd && timeEnd > aStart;
+  }) || null;
+}
+
 /* ═══════════════════════════════════════════════════════
    MODAL MODIFICA APPUNTAMENTO
    ═══════════════════════════════════════════════════════ */
@@ -3066,11 +3172,13 @@ function openEditAptModal(id) {
     ? dt.toLocaleTimeString('it-IT', { hour:'2-digit', minute:'2-digit', timeZone:'Europe/Rome' })
     : '';
 
-  document.getElementById('edit-apt-client').value = a.nome_cliente || '';
-  document.getElementById('edit-apt-amount').value = parseFloat(a.importo_previsto || 0) > 0
-    ? parseFloat(a.importo_previsto).toFixed(2) : '';
-  document.getElementById('edit-apt-notes').value  = a.note || '';
-  document.getElementById('edit-apt-status').value = a.stato || 'confermato';
+  document.getElementById('edit-apt-time-end').value = a.ora_fine || '';
+  document.getElementById('edit-apt-client').value   = a.nome_cliente || '';
+  document.getElementById('edit-apt-amount').value   = parseFloat(a.importo_previsto || 0) > 0 ? parseFloat(a.importo_previsto).toFixed(2) : '';
+  document.getElementById('edit-apt-amount-max').value = parseFloat(a.importo_max || 0) > 0 ? parseFloat(a.importo_max).toFixed(2) : '';
+  document.getElementById('edit-apt-acconto').value  = parseFloat(a.acconto || 0) > 0 ? parseFloat(a.acconto).toFixed(2) : '';
+  document.getElementById('edit-apt-notes').value    = a.note || '';
+  document.getElementById('edit-apt-status').value   = a.stato || 'confermato';
 
   document.getElementById('edit-apt-modal').style.display = 'flex';
 }
@@ -3089,15 +3197,29 @@ async function submitEditApt() {
   const client = document.getElementById('edit-apt-client').value.trim();
   if (!client)  { showToast('Inserisci il nome del cliente'); return; }
 
-  const timeVal = document.getElementById('edit-apt-time').value;
-  const amtRaw  = parseFloat(document.getElementById('edit-apt-amount').value) || 0;
-  const notes   = document.getElementById('edit-apt-notes').value.trim();
-  const status  = document.getElementById('edit-apt-status').value;
+  const timeVal  = document.getElementById('edit-apt-time').value;
+  const timeEnd  = document.getElementById('edit-apt-time-end').value;
+  const amtMin   = parseFloat(document.getElementById('edit-apt-amount').value) || 0;
+  const amtMax   = parseFloat(document.getElementById('edit-apt-amount-max').value) || 0;
+  const acconto  = parseFloat(document.getElementById('edit-apt-acconto').value) || 0;
+  const notes    = document.getElementById('edit-apt-notes').value.trim();
+  const status   = document.getElementById('edit-apt-status').value;
+
+  if (timeVal && timeEnd && timeEnd <= timeVal) {
+    showToast("L'ora di fine deve essere dopo quella di inizio"); return;
+  }
+  const conflict = _checkAptConflict(dateIso, timeVal, timeEnd, _editingAptId);
+  if (conflict) {
+    const dt = new Date(conflict.data_ora);
+    const tStr = dt.toLocaleTimeString('it-IT', {hour:'2-digit',minute:'2-digit',timeZone:'Europe/Rome'});
+    const endStr = conflict.ora_fine ? ` – ${conflict.ora_fine}` : '';
+    if (!confirm(`Attenzione: c'è già un appuntamento in questa fascia oraria.\n"${conflict.nome_cliente}" (${tStr}${endStr})\n\nSalva comunque?`)) return;
+  }
 
   const btn = document.getElementById('btn-submit-edit-apt');
   btn.disabled = true; btn.textContent = 'Salvataggio…';
 
-  await saveEditApt(_editingAptId, dateIso, timeVal, client, amtRaw, notes, status);
+  await saveEditApt(_editingAptId, dateIso, timeVal, timeEnd, client, amtMin, amtMax, acconto, notes, status);
 
   btn.disabled = false; btn.textContent = 'Salva';
   closeEditAptModal();
@@ -3316,9 +3438,26 @@ function calAddAppuntamento() {
   const client = document.getElementById('add-apt-client').value.trim();
   if (!client) { showToast('Inserisci il nome del cliente'); return; }
 
-  const timeVal = document.getElementById('add-apt-time').value;
-  const amtRaw  = parseFloat(document.getElementById('add-apt-amount').value) || 0;
-  const notes   = document.getElementById('add-apt-notes').value.trim();
+  const timeVal  = document.getElementById('add-apt-time').value;
+  const timeEnd  = document.getElementById('add-apt-time-end').value;
+  const amtMin   = parseFloat(document.getElementById('add-apt-amount').value) || 0;
+  const amtMax   = parseFloat(document.getElementById('add-apt-amount-max').value) || 0;
+  const accontoChk = document.getElementById('add-apt-acconto-chk');
+  const acconto  = accontoChk?.checked ? (parseFloat(document.getElementById('add-apt-acconto').value) || 0) : 0;
+  const notes    = document.getElementById('add-apt-notes').value.trim();
+
+  if (timeVal && timeEnd && timeEnd <= timeVal) {
+    showToast("L'ora di fine deve essere dopo quella di inizio"); return;
+  }
+
+  // Controlla conflitti
+  const conflict = _checkAptConflict(dateIso, timeVal, timeEnd);
+  if (conflict) {
+    const dt = new Date(conflict.data_ora);
+    const tStr = dt.toLocaleTimeString('it-IT', {hour:'2-digit',minute:'2-digit',timeZone:'Europe/Rome'});
+    const endStr = conflict.ora_fine ? ` – ${conflict.ora_fine}` : '';
+    if (!confirm(`Attenzione: c'è già un appuntamento in questa fascia oraria.\n"${conflict.nome_cliente}" (${tStr}${endStr})\n\nAggiungi comunque?`)) return;
+  }
 
   // Crea reminder collegato se richiesto
   const remChk = document.getElementById('add-apt-reminder-chk');
@@ -3330,13 +3469,15 @@ function calAddAppuntamento() {
     document.getElementById('add-apt-reminder-text').value = '';
   }
 
-  // Reset form (data e ora rimangono precompilati)
-  ['add-apt-client','add-apt-amount','add-apt-notes'].forEach(id => {
+  // Reset form
+  ['add-apt-client','add-apt-amount','add-apt-amount-max','add-apt-acconto','add-apt-notes'].forEach(id => {
     document.getElementById(id).value = '';
   });
   document.getElementById('add-apt-time').value = '';
+  document.getElementById('add-apt-time-end').value = '';
+  if (accontoChk) { accontoChk.checked = false; document.getElementById('add-apt-acconto-wrap').style.display = 'none'; }
 
-  addAppuntamento(dateIso, timeVal, client, amtRaw, notes);
+  addAppuntamento(dateIso, timeVal, timeEnd, client, amtMin, amtMax, acconto, notes);
   closeAddModal();
   showToast('Appuntamento aggiunto ✓');
   renderCalendarSection();
@@ -3420,8 +3561,8 @@ async function calAddExpense() {
 /* ── Azioni rapide sugli eventi ── */
 
 function calRiporta(id) {
-  _showTaxModal(id, (tassata) => {
-    confirmRiportaEntrata(id, tassata);
+  _showTaxModal(id, (tassata, finalAmt) => {
+    confirmRiportaEntrata(id, tassata, finalAmt);
     renderCalendarSection();
     renderHomeView();
   });
